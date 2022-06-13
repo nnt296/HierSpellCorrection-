@@ -2,33 +2,31 @@
 This script is used to make diacritic errors, ngọng
 """
 
-import sys
-from this import s
-from underthesea import sent_tokenize, word_tokenize
 import random
 import numpy as np
 import re
-from tqdm import tqdm
-import string 
+import string
 import locale
+from underthesea import sent_tokenize, word_tokenize
 
 # Constants
-s1 = u'ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠạẢảẤấẦầẨẩẪẫẬậẮắẰằẲẳẴẵẶặẸẹẺẻẼẽẾếỀềỂểỄễỆệỈỉỊịỌọỎỏỐốỒồỔổỖỗỘộỚớỜờỞởỠỡỢợỤụỦủỨứỪừỬửỮữỰựỲỳỴỵỶỷỸỹ'
-s0 = u'AAAAEEEIIOOOOUUYaaaaeeeiioooouuyAaDdIiUuOoUuAaAaAaAaAaAaAaAaAaAaAaAaEeEeEeEeEeEeEeEeIiIiOoOoOoOoOoOoOoOoOoOoOoOoUuUuUuUuUuUuUuYyYyYyYy'
+s1 = u'ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠạẢảẤấẦầẨẩẪẫẬậẮắẰằẲẳẴẵẶặ' \
+     u'ẸẹẺẻẼẽẾếỀềỂểỄễỆệỈỉỊịỌọỎỏỐốỒồỔổỖỗỘộỚớỜờỞởỠỡỢợỤụỦủỨứỪừỬửỮữỰựỲỳỴỵỶỷỸỹ'
+s0 = u'AAAAEEEIIOOOOUUYaaaaeeeiioooouuyAaDdIiUuOoUuAaAaAaAaAaAaAaAaAaAaAaAa' \
+     u'EeEeEeEeEeEeEeEeIiIiOoOoOoOoOoOoOoOoOoOoOoOoUuUuUuUuUuUuUuYyYyYyYy'
 
 s3 = u'ẤấẦầẨẩẪẫẬậẮắẰằẲẳẴẵẶặẾếỀềỂểỄễỆệỐốỒồỔổỖỗỘộỚớỜờỞởỠỡỢợỨứỪừỬửỮữỰự'
 s2 = u'ÂâÂâÂâÂâÂâĂăĂăĂăĂăĂăÊêÊêÊêÊêÊêÔôÔôÔôÔôÔôƠơƠơƠơƠơƠơƯưƯưƯưƯưƯư'
-alphabet = 'abcdefghijklmnopqrstuvwxyz'
+alphabet = u'abcdefghijklmnopqrstuvwxyz'
 
 s5 = ['úy', 'ùy', 'ủy', 'ũy', 'ụy', 'óa', 'òa', 'ỏa', 'õa', 'ọa']
 s4 = ['uý', 'uỳ', 'uỷ', 'uỹ', 'uỵ', 'oá', 'oà', 'oả', 'oã', 'oạ']
 
-vowels = ['a', 'á', 'à', 'ả', 'ạ', 'ă', 'ắ', 'ằ', 'ẳ', 'ặ', 'â', 'ấ', 'ầ', 'ẩ', 'ậ', 
-        'e', 'é', 'è', 'ẻ', 'ẹ', 'ê', 'ế', 'ề', 'ể', 'ệ', 'i', 'í', 'ì', 'ỉ', 'ị', 
-        'o', 'ó', 'ò', 'ỏ', 'ọ', 'ô', 'ố', 'ồ', 'ổ', 'ộ', 'ơ', 'ớ', 'ờ', 'ở', 'ợ', 
-        'u', 'ú', 'ù', 'ủ', 'ụ', 'ư', 'ứ', 'ừ', 'ử', 'ự', 'y', 'ý', 'ỳ', 'ỷ', 'ỵ']
+vowels = ['a', 'á', 'à', 'ả', 'ạ', 'ă', 'ắ', 'ằ', 'ẳ', 'ặ', 'â', 'ấ', 'ầ', 'ẩ', 'ậ',
+          'e', 'é', 'è', 'ẻ', 'ẹ', 'ê', 'ế', 'ề', 'ể', 'ệ', 'i', 'í', 'ì', 'ỉ', 'ị',
+          'o', 'ó', 'ò', 'ỏ', 'ọ', 'ô', 'ố', 'ồ', 'ổ', 'ộ', 'ơ', 'ớ', 'ờ', 'ở', 'ợ',
+          'u', 'ú', 'ù', 'ủ', 'ụ', 'ư', 'ứ', 'ừ', 'ử', 'ự', 'y', 'ý', 'ỳ', 'ỷ', 'ỵ']
 
-# rdrsegmenter = VnCoreNLP("vncorenlp/VnCoreNLP-1.1.1.jar", annotators="wseg", max_heap_size='-Xmx500m') 
 
 def remove_accents(input_str):
     s = ''
@@ -39,32 +37,37 @@ def remove_accents(input_str):
             s += c
     return s
 
+
 def remove_special_char(input_article):
     # annotator = VnCoreNLP(address="http://127.0.0.1", port=9000) 
-    pattern = ">>.+>>" # remove hyperlinks between ">>"
+    pattern = ">>.+>>"  # remove hyperlinks between ">>"
 
-    sentences = sent_tokenize(input_article) # sentence tokenize
+    sentences = sent_tokenize(input_article)  # sentence tokenize
     for i in range(len(sentences)):
-        sentences[i] = re.sub(pattern,"",sentences[i])
-        sentences[i] = sentences[i].replace(".. ",". ")
+        sentences[i] = re.sub(pattern, "", sentences[i])
+        sentences[i] = sentences[i].replace(".. ", ". ")
     sentences = [" ".join(word_tokenize(sent)) for sent in sentences]
     return sentences
+
 
 def read_raw_text(input_file):
     with open(input_file, 'r') as fr:
         text = fr.read()
     return text
 
+
 def read_keywords_file(keywords_file):
     with open(keywords_file, 'r') as fr:
         keywords = fr.readlines()
     return keywords
+
 
 def find_articles_by_keyword(articles, keywords):
     articles_by_keywords = []
     for article in articles:
         if article.find(keywords):
             pass
+
 
 # original typo generation function - not use anymore
 # def generate_typos(token,
@@ -128,54 +131,58 @@ def find_articles_by_keyword(articles, keywords):
 #     return token
 
 # check if a token is number or not (e.g. 15.20 or 15,20)
-def is_number(string):
+def is_number(text):
     try:
-        float(string) 
+        float(text)
         return True
     except ValueError:
         pass
     try:
-        locale.atoi(string)
+        locale.atoi(text)
         return True
     except ValueError:
         pass
     return False
 
-# check if a token is hour or measurement (e.g. 15h20, 3h, 1m55)    
-def is_time_or_measurement(string):
+
+# check if a token is hour or measurement (e.g. 15h20, 3h, 1m55)
+def is_time_or_measurement(text):
     time_pattern = r'\dh\d{2}'
     time_pattern2 = r'\dh'
     measurement_pattern = r'\dm\d'
-    time_search = re.search(time_pattern, string)
-    time_search2 = re.search(time_pattern2, string)
-    measurement_search = re.search(measurement_pattern, string)
+    time_search = re.search(time_pattern, text)
+    time_search2 = re.search(time_pattern2, text)
+    measurement_search = re.search(measurement_pattern, text)
     return time_search or time_search2 or measurement_search
 
-# check if a token include 'uy' or 'oa' 
-def special_tone_contain(string):
-  for i in range(len(s5)):
-    if string.find(s5[i]) > 0:
-      return i
-  return False
+
+# check if a token include 'uy' or 'oa'
+def special_tone_contain(text):
+    for i in range(len(s5)):
+        if text.find(s5[i]) > 0:
+            return i
+    return False
+
 
 def manual_replace(s, char, index, length):
-    return s[:index] + char + s[index +length:]
+    return s[:index] + char + s[index + length:]
+
 
 # main function
 def generate_typos_and_pos(token,
-                   no_typo_prob=0.6,
-                   ngong_typo_prob=0.4,
-                   special_tone_prob=0.3,
-                   asccents_prob=0.3,
-                   swap_char_prob=0.1,
-                   add_chars_prob=0.2,
-                   remove_chars_prob=0.2
-                   ):
+                           no_typo_prob=0.6,
+                           ngong_typo_prob=0.4,
+                           special_tone_prob=0.3,
+                           accents_prob=0.3,
+                           swap_char_prob=0.1,
+                           add_chars_prob=0.2,
+                           remove_chars_prob=0.2):
+
     locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
     pos = "C"
     typo_type = "None"
-    if is_number(token) or is_time_or_measurement(token) or token in string.punctuation: # skip typo on digit 
+    if is_number(token) or is_time_or_measurement(token) or token in string.punctuation:  # skip typo on digit
         return token, pos, typo_type
     if random.random() < no_typo_prob:
         # print("No typo prob")
@@ -199,7 +206,7 @@ def generate_typos_and_pos(token,
         token = manual_replace(token, 'N', 0, 1)
         pos = "TYPO"
         typo_type = "Ngong l-n"
-        return token, pos, typo_type    
+        return token, pos, typo_type
     # Ngong n-l
     if token.startswith('n') and len(token) > 2 and token[1] in vowels and random.random() < ngong_typo_prob:
         token = manual_replace(token, 'l', 0, 1)
@@ -300,30 +307,26 @@ def generate_typos_and_pos(token,
         typo_type = "Ngong d-r"
         return token, pos, typo_type
     # Bo dau
-    if random.random() < asccents_prob:
+    if random.random() < accents_prob:
         if random.random() < 0.5:
-            # print("asccents_prob < 0.5")
+            # print("accents_prob < 0.5")
             new_token = remove_accents(token)
         else:
-            # print("asccents_prob >= 0.5")
+            # print("accents_prob >= 0.5")
             new_chars = []
             for cc in token:
                 if cc in s3 and random.random() < 0.7:
                     cc = s2[s3.index(cc)]
                 if cc in s1 and random.random() < 0.5:
-                    cc = s0[s1.index(cc)]                    
+                    cc = s0[s1.index(cc)]
                 new_chars.append(cc)
             new_token = "".join(new_chars)
-        
+
         if new_token != token:
             pos = "TYPO"
             typo_type = "Remove accent"
             token = new_token
-            
-    # if random.random() < lowercase_prob:
-    #     print("lowercase_prob")
-    #     token = token.lower()
-    #     # print(token)
+
     if random.random() < swap_char_prob:
         # print("swap_char_prob")
         chars = list(token)
@@ -335,7 +338,7 @@ def generate_typos_and_pos(token,
         chars = [chars[ii] if ii not in index else chars[swap_dict[ii]]
                  for ii in range(len(chars))]
         new_token = "".join(chars)
-        if new_token != token: 
+        if new_token != token:
             token = new_token
             pos = "TYPO"
             typo_type = "Swap char"
@@ -344,7 +347,7 @@ def generate_typos_and_pos(token,
         n_remove = min(len(token), np.random.poisson(0.005) + 1)
         for _ in range(n_remove):
             pos = np.random.choice(np.arange(len(token)), size=1)[0]
-            token = token[:pos] + token[pos+1:]
+            token = token[:pos] + token[pos + 1:]
         pos = "TYPO"
         typo_type = "Remove char"
     if random.random() < add_chars_prob:
@@ -358,88 +361,4 @@ def generate_typos_and_pos(token,
         pos = "TYPO"
         typo_type = "Add char"
 
-    
     return token, pos, typo_type
-
-# def generate_typos_for_text(texts):
-#     new_texts = []
-#     if len(texts) > 0:
-#         for s in texts:
-#             new_s = " ".join([generate_typos(t) for t in s.split()])
-#             new_texts.append(new_s)
-#     return new_texts
-
-# input a sentence and return a list of tokens, typo position and typo type (optional)
-def generate_typos_and_pos_for_text(sentence):
-    new_texts = []
-    typo_pos = []
-    typo_types = []
-    
-    if len(sentence) > 0:
-        for s in sentence:
-            new_tokens = []
-            for t in s.split():                
-                new_t, typo_label, typo_type = generate_typos_and_pos(t)
-                new_tokens.append(new_t)
-                typo_pos.append(typo_label)
-                typo_types.append(typo_type)
-            new_sentence = " ".join(new_tokens)
-
-            new_texts.append(new_sentence)
-    # print(new_texts)
-    # print(typo_pos)
-    return new_texts, typo_pos, typo_types
-
-def main():
-    input_file = sys.argv[1] 
-    train_output = sys.argv[2]
-    test_output = sys.argv[3]   
-
-    print("Reading input file")
-    text = read_raw_text(input_file)
-    articles = text.split("\n")
-    print("Number of articles: ", len(articles))
-    train_samples = int(len(articles)*0.8)
-
-    # keywords_file = sys.argv[2]    
-    # keywords_list = read_keywords_file(keywords_file)
-    # print("Found {} keywords.".format(len(keywords_list)))
-
-    with open(train_output, "w") as fw:        
-        sentence_idx = 0
-
-        for a in tqdm(articles[:train_samples]):
-            preprocessed_sentences = remove_special_char(a)
-            for sentence in preprocessed_sentences:       
-                # if sentence is too short, skip
-                if len(sentence.split()) > 2: 
-                    sentence_idx = sentence_idx + 1
-                    typo_sentence, pos, typo_types = generate_typos_and_pos_for_text([sentence])
-                    if len(typo_sentence[0].split()) == len(pos):
-                        for i in range(len(pos)):                            
-                            # fw.write(typo_sentence[0].split()[i] + '\t' + pos[i] + '\t' + typo_types[i] + '\n')
-                            fw.write(typo_sentence[0].split()[i] + '\t' + pos[i] + '\n')
-                fw.write('\n')
-    print("Number of train sentences: ", sentence_idx)
-    with open(test_output, "w") as fw:        
-        sentence_idx = 0
-
-        for a in tqdm(articles[train_samples+1:]):
-            preprocessed_sentences = remove_special_char(a)
-            for sentence in preprocessed_sentences:       
-                # if sentence is too short, skip
-                if len(sentence.split()) > 2: 
-                    sentence_idx = sentence_idx + 1
-                    typo_sentence, pos, typo_types = generate_typos_and_pos_for_text([sentence])
-                    if len(typo_sentence[0].split()) == len(pos):
-                        for i in range(len(pos)):                            
-                            # fw.write(typo_sentence[0].split()[i] + '\t' + pos[i] + '\t' + typo_types[i] + '\n')
-                            fw.write(typo_sentence[0].split()[i] + '\t' + pos[i] + '\n')
-                fw.write('\n')
-    print("Number of test sentences: ", sentence_idx)
-    print("Done") 
-    # f_original.close()                 
-    # f_typos.close()  
-
-if __name__=="__main__":
-    main()

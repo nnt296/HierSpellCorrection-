@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import List
 
 from tokenizers import Tokenizer
 from tokenizers.normalizers import NFKC
@@ -8,7 +9,7 @@ from tokenizers.pre_tokenizers import WhitespaceSplit
 from tokenizers.processors import TemplateProcessing
 from nltk.tokenize import word_tokenize
 
-from common import SpecialTokens, all_special_tokens
+from models.common import SpecialTokens, all_special_tokens
 
 
 class CPreTokenizer(metaclass=ABCMeta):
@@ -22,7 +23,7 @@ class PreWordTokenizer(CPreTokenizer):
         super().__init__()
         self.normalizer = NFKC()
 
-    def pre_tokenize(self, sequence: str) -> str:
+    def pre_tokenize(self, sequence: str) -> List[str]:
         # strip() -> Normalize NFC -> nltk tokenizer
         sequence = sequence.strip()
         sequence = self.normalizer.normalize_str(sequence)
@@ -33,8 +34,7 @@ class PreWordTokenizer(CPreTokenizer):
             if tokens[i] == "``" or tokens[i] == "''" or \
                     tokens[i] == '”' or tokens[i] == '“':
                 tokens[i] = '"'
-
-        return ' '.join(tokens)
+        return tokens
 
 
 class PreCharTokenizer(CPreTokenizer):
@@ -42,17 +42,27 @@ class PreCharTokenizer(CPreTokenizer):
         super().__init__()
         self.normalizer = NFKC()
 
-    def pre_tokenize(self, sequence: str) -> str:
+    def pre_tokenize(self, sequence: str) -> List[str]:
         # strip() -> Normalize NFC -> nltk tokenizer
         sequence = sequence.strip()
         sequence = self.normalizer.normalize_str(sequence)
 
         if sequence in all_special_tokens:
-            return sequence
+            return [sequence]
 
         tokens = [c for c in sequence
                   if c != ' ' and c != '”' and c != '“']
-        return ' '.join(tokens)
+        return tokens
+
+
+def read_file_generator(corpus_path: str, pre_tokenizer: CPreTokenizer):
+    with open(corpus_path) as fp:
+        while True:
+            line = fp.readline()
+            if not line:
+                break
+
+            yield pre_tokenizer.pre_tokenize(line)
 
 
 def create_tokenizer(corpus_path: str,
@@ -60,9 +70,7 @@ def create_tokenizer(corpus_path: str,
                      vocab_size: int,
                      min_frequency: int,
                      save_path: str):
-    with open(corpus_path) as fin:
-        corpus = fin.readlines()
-    corpus = [pre_tokenizer.pre_tokenize(line) for line in corpus]
+    corpus_generator = read_file_generator(corpus_path, pre_tokenizer)
 
     tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
     tokenizer.enable_padding(
@@ -86,7 +94,7 @@ def create_tokenizer(corpus_path: str,
         min_frequency=min_frequency,
         show_progress=True,
         special_tokens=[SpecialTokens.pad, SpecialTokens.unk, SpecialTokens.cls, SpecialTokens.sep])
-    tokenizer.train_from_iterator(corpus, trainer=trainer)
+    tokenizer.train_from_iterator(corpus_generator, trainer=trainer)
     tokenizer.save(save_path)
 
 

@@ -1,15 +1,21 @@
+import random
+from typing import List
+
 import numpy as np
 import re
 import unidecode
-import nltk
 from nltk.tokenize import word_tokenize
 import string
 
 
+# import nltk
 # nltk.download('punkt')
 
+def has_numbers(text):
+    return bool(re.search(r'\d', text))
 
-class SynthesizeData(object):
+
+class Synthesizer(object):
     """
     Utils class to create artificial miss-spelled words
     Args:
@@ -17,26 +23,18 @@ class SynthesizeData(object):
                     Vocab file is expected to be a set of words, separate by ' ', no newline character.
     """
 
-    def __init__(self, vocab_path=""):
+    def __init__(self):
         # self.vocab = open(vocab_path, 'r', encoding = 'utf-8').read().split()
         self.tokenizer = word_tokenize
         self.word_couples = [
-            ['sương', 'xương'], ['sĩ', 'sỹ'], ['sẽ', 'sẻ'], ['sã', 'sả'], ['sả', 'xả'], ['sẽ', 'sẻ'],
-            ['mùi', 'muồi'],
-            ['chỉnh', 'chỉn'], ['sữa', 'sửa'], ['chuẩn', 'chẩn'], ['lẻ', 'lẽ'], ['chẳng', 'chẵng'],
-            ['cổ', 'cỗ'],
-            ['sát', 'xát'], ['cập', 'cặp'], ['truyện', 'chuyện'], ['xá', 'sá'], ['giả', 'dả'],
-            ['đỡ', 'đở'],
-            ['giữ', 'dữ'], ['giã', 'dã'], ['xảo', 'sảo'], ['kiểm', 'kiễm'], ['cuộc', 'cục'],
-            ['dạng', 'dạn'],
-            ['tản', 'tảng'], ['ngành', 'nghành'], ['nghề', 'ngề'], ['nổ', 'nỗ'], ['rảnh', 'rãnh'],
-            ['sẵn', 'sẳn'],
-            ['sáng', 'xán'], ['xuất', 'suất'], ['suôn', 'suông'], ['sử', 'xử'], ['sắc', 'xắc'],
-            ['chữa', 'chửa'],
-            ['thắn', 'thắng'], ['dỡ', 'dở'], ['trải', 'trãi'], ['trao', 'trau'], ['trung', 'chung'],
-            ['thăm', 'tham'],
-            ['sét', 'xét'], ['dục', 'giục'], ['tả', 'tã'], ['sông', 'xông'], ['sáo', 'xáo'],
-            ['sang', 'xang'],
+            ['sương', 'xương'], ['sĩ', 'sỹ'], ['sẽ', 'sẻ'], ['sã', 'sả'], ['sả', 'xả'], ['mùi', 'muồi'],
+            ['chỉnh', 'chỉn'], ['sữa', 'sửa'], ['chuẩn', 'chẩn'], ['lẻ', 'lẽ'], ['chẳng', 'chẵng'], ['cổ', 'cỗ'],
+            ['sát', 'xát'], ['cập', 'cặp'], ['truyện', 'chuyện'], ['xá', 'sá'], ['giả', 'dả'], ['đỡ', 'đở'],
+            ['giữ', 'dữ'], ['giã', 'dã'], ['xảo', 'sảo'], ['kiểm', 'kiễm'], ['cuộc', 'cục'], ['dạng', 'dạn'],
+            ['tản', 'tảng'], ['ngành', 'nghành'], ['nghề', 'ngề'], ['nổ', 'nỗ'], ['rảnh', 'rãnh'], ['sẵn', 'sẳn'],
+            ['sáng', 'xán'], ['xuất', 'suất'], ['suôn', 'suông'], ['sử', 'xử'], ['sắc', 'xắc'], ['chữa', 'chửa'],
+            ['thắn', 'thắng'], ['dỡ', 'dở'], ['trải', 'trãi'], ['trao', 'trau'], ['trung', 'chung'], ['thăm', 'tham'],
+            ['sét', 'xét'], ['dục', 'giục'], ['tả', 'tã'], ['sông', 'xông'], ['sáo', 'xáo'], ['sang', 'xang'],
             ['ngã', 'ngả'], ['xuống', 'suống'], ['xuồng', 'suồng']
         ]
 
@@ -45,15 +43,13 @@ class SynthesizeData(object):
             'ơ', 'p', 'q', 'r', 's', 't', 'u', 'ư', 'v', 'x', 'y'
         ]
         self.alphabet_len = len(self.vn_alphabet)
-        self.char_couples = [
-            ['i', 'y'], ['s', 'x'], ['gi', 'd'],
-            ['ă', 'â'], ['ch', 'tr'], ['ng', 'n'],
-            ['nh', 'n'], ['ngh', 'ng'], ['ục', 'uộc'], ['o', 'u'],
-            ['ă', 'a'], ['o', 'ô'], ['ả', 'ã'], ['ổ', 'ỗ'], ['ủ', 'ũ'], ['ễ', 'ể'],
-            ['e', 'ê'], ['à', 'ờ'], ['ằ', 'à'], ['ẩn', 'uẩn'], ['ẽ', 'ẻ'], ['ùi', 'uồi'], ['ă', 'â'],
-            ['ở', 'ỡ'], ['ỹ', 'ỷ'], ['ỉ', 'ĩ'], ['ị', 'ỵ'],
-            ['ấ', 'á'], ['n', 'l'], ['qu', 'w'], ['ph', 'f'], ['d', 'z'], ['c', 'k'], ['qu', 'q'],
-            ['i', 'j'], ['gi', 'j'],
+        self.typo_group = [
+            ['i', 'y', 'j'], ['s', 'x'], ['gi', 'd', 'r', 'z'],
+            ['ă', 'â', 'a', 'ả', 'ã'], ['ch', 'tr'], ['ng', 'n', 'nh', 'ngh', 'l'],
+            ['ục', 'uộc'], ['o', 'ô', 'u'], ['ổ', 'ỗ'], ['ủ', 'ũ'], ['ễ', 'ể'],
+            ['e', 'ê'], ['à', 'ờ', 'ằ'], ['ẩn', 'uẩn'], ['ẽ', 'ẻ'],
+            ['ở', 'ỡ'], ['ỹ', 'ỷ'], ['ỉ', 'ĩ'], ['ị', 'ỵ'], ['ùi', 'uồi'],
+            ['ấ', 'á'], ['qu', 'w', 'q'], ['ph', 'f'], ['c', 'k']
         ]
 
         self.teencode_dict = {
@@ -146,8 +142,9 @@ class SynthesizeData(object):
                 chosen_one = np.random.randint(0, len(candidates))
             return candidates[chosen_one]
 
-    def get_keyboard_neighbors(self):
-        keyboard_neighbors = {}
+    @staticmethod
+    def get_keyboard_neighbors():
+        keyboard_neighbors = dict()
         keyboard_neighbors['a'] = "aáàảãạăắằẳẵặâấầẩẫậ"
         keyboard_neighbors['ă'] = "aáàảãạăắằẳẵặâấầẩẫậ"
         keyboard_neighbors['â'] = "aáàảãạăắằẳẵặâấầẩẫậ"
@@ -244,36 +241,6 @@ class SynthesizeData(object):
 
         return keyboard_neighbors
 
-    def replace_char_noaccent(self, text, onehot_label):
-        # find index noise
-        idx = np.random.randint(0, len(onehot_label))
-        prevent_loop = 0
-        while onehot_label[idx] == 1 or text[idx].isnumeric() or text[idx] in string.punctuation:
-            idx = np.random.randint(0, len(onehot_label))
-            prevent_loop += 1
-            if prevent_loop > 10:
-                return False, text, onehot_label
-
-        index_noise = idx
-        # onehot_label[index_noise] = 1
-        word_noise = text[index_noise]
-        for i in range(0, len(word_noise)):
-            char = word_noise[i]
-
-            if char in self.keyboard_neighbors:
-                neighbors = self.keyboard_neighbors[char]
-                idx_neigh = np.random.randint(0, len(neighbors))
-                replaced = neighbors[idx_neigh]
-                new_word = word_noise[:i] + replaced + word_noise[i + 1:]
-                if new_word == word_noise:
-                    continue
-
-                text[index_noise] = new_word
-                onehot_label[index_noise] = 1
-                return True, text, onehot_label
-
-        return False, text, onehot_label
-
     def replace_word_candidate(self, word):
         """
         Return a homophone word of the input word.
@@ -303,13 +270,13 @@ class SynthesizeData(object):
         """
         return a homophone char/subword of the input char.
         """
-        for couple in self.char_couples:
-            for i in range(2):
-                if couple[i] == char:
-                    if i == 0:
-                        return couple[1]
-                    else:
-                        return couple[0]
+        for group in self.typo_group:
+            if char in group or char.capitalize() in group:
+                sub_group = set(group) - {char}
+                if char[0].isupper():
+                    return random.sample(population=sub_group, k=1)[0].capitalize()
+                else:
+                    return random.sample(population=sub_group, k=1)[0]
 
     def replace_char_candidate_typo(self, char: str):
         """
@@ -322,7 +289,7 @@ class SynthesizeData(object):
 
     def get_all_char_candidates(self):
         all_char_candidates = []
-        for couple in self.char_couples:
+        for couple in self.typo_group:
             all_char_candidates.extend(couple)
         return all_char_candidates
 
@@ -332,111 +299,13 @@ class SynthesizeData(object):
             all_word_candidates.extend(couple)
         return all_word_candidates
 
-    def remove_diacritics(self, text, onehot_label):
-        """
-        Replace word which has diacritics with the same word without diacritics
-        Args:
-            text: a list of word tokens
-            onehot_label: onehot array indicate position of word that has already modified, so this
-            function only choose the word that does not have onehot label == 1.
-        return: a list of word tokens has one word that its diacritics was removed,
-                a list of onehot label indicate the position of words that has been modified.
-        """
-        idx = np.random.randint(0, len(onehot_label))
-        prevent_loop = 0
-        while onehot_label[idx] == 1 or text[idx] == unidecode.unidecode(text[idx]) or text[idx] in string.punctuation:
-            idx = np.random.randint(0, len(onehot_label))
-            prevent_loop += 1
-            if prevent_loop > 10:
-                return False, text, onehot_label
-
-        onehot_label[idx] = 1
-        text[idx] = unidecode.unidecode(text[idx])
-        return True, text, onehot_label
-
-    def replace_with_random_letter(self, text, onehot_label):
-        """
-        Replace, add (or remove) a random letter in a random chosen word with a random letter
-        Args:
-            text: a list of word tokens
-            onehot_label: onehot array indicate position of word that has already modified, so this
-            function only choose the word that does not have onehot label == 1.
-        return: a list of word tokens has one word that has been modified,
-                a list of onehot label indicate the position of words that has been modified.
-        """
-        idx = np.random.randint(0, len(onehot_label))
-        prevent_loop = 0
-        while onehot_label[idx] == 1 or text[idx].isnumeric() or text[idx] in string.punctuation:
-            idx = np.random.randint(0, len(onehot_label))
-            prevent_loop += 1
-            if prevent_loop > 10:
-                return False, text, onehot_label
-
-        # replace, add or remove? 0 is replaced, 1 is added, 2 is removed
-        coin = np.random.choice([0, 1, 2])
-        if coin == 0:
-            chosen_letter = text[idx][np.random.randint(0, len(text[idx]))]
-            replaced = self.vn_alphabet[np.random.randint(0, self.alphabet_len)]
-            try:
-                text[idx] = re.sub(chosen_letter, replaced, text[idx])
-            except:
-                return False, text, onehot_label
-        elif coin == 1:
-            chosen_letter = text[idx][np.random.randint(0, len(text[idx]))]
-            replaced = chosen_letter + self.vn_alphabet[np.random.randint(0, self.alphabet_len)]
-            try:
-                text[idx] = re.sub(chosen_letter, replaced, text[idx])
-            except:
-                return False, text, onehot_label
-        else:
-            chosen_letter = text[idx][np.random.randint(0, len(text[idx]))]
-            try:
-                text[idx] = re.sub(chosen_letter, '', text[idx])
-            except:
-                return False, text, onehot_label
-
-        onehot_label[idx] = 1
-        return True, text, onehot_label
-
-    def replace_with_homophone_word(self, text, onehot_label):
-        """
-        Replace a candidate word (if exist in the word_couple) with its homophone.
-        If succeeded, return True, else False
-
-        Args:
-            text: a list of word tokens
-            onehot_label: onehot array indicate position of word that has already modified, so this
-            function only choose the word that does not have onehot label == 1.
-        return: True, text, onehot_label if successful replace, else False, text, onehot_label
-        """
-        candidates = []
-        for i in range(len(text)):
-            # account for the case that the word in the text is upper case but its lowercase match the candidates list
-            if text[i].lower() in self.all_word_candidates or text[i].lower() in self.teencode_dict.keys():
-                candidates.append((i, text[i]))
-
-        if len(candidates) == 0:
-            return False, text, onehot_label
-
-        idx = np.random.randint(0, len(candidates))
-        prevent_loop = 0
-        while onehot_label[candidates[idx][0]] == 1:
-            idx = np.random.choice(np.arange(0, len(candidates)))
-            prevent_loop += 1
-            if prevent_loop > 5:
-                return False, text, onehot_label
-
-        text[candidates[idx][0]] = self.replace_word_candidate(candidates[idx][1])
-        onehot_label[candidates[idx][0]] = 1
-        return True, text, onehot_label
-
-    def replace_with_homophone_letter(self, text, onehot_label):
+    def replace_with_homophone_letter(self, text, label):
         """
         Replace a subword/letter with its homophones
         Args:
             text: a list of word tokens
-            onehot_label: onehot array indicate position of word that has already modified, so this
-            function only choose the word that does not have onehot label == 1.
+            label: onehot array indicate position of word that has already modified, so this
+            function only choose the word that does not get modified.
         return: True, text, onehot_label if successful replace, else False, None, None
         """
         candidates = []
@@ -447,39 +316,39 @@ class SynthesizeData(object):
                     break
 
         if len(candidates) == 0:
-            return False, text, onehot_label
+            return False, text, label
         else:
             idx = np.random.randint(0, len(candidates))
             prevent_loop = 0
-            while onehot_label[candidates[idx][0]] == 1:
+            while label[candidates[idx][0]] != 0:
                 idx = np.random.randint(0, len(candidates))
                 prevent_loop += 1
                 if prevent_loop > 5:
-                    return False, text, onehot_label
+                    return False, text, label
 
             replaced = self.replace_char_candidate(candidates[idx][1])
             text[candidates[idx][0]] = re.sub(candidates[idx][1], replaced, text[candidates[idx][0]])
 
-            onehot_label[candidates[idx][0]] = 1
-            return True, text, onehot_label
+            label[candidates[idx][0]] = 1
+            return True, text, label
 
-    def replace_with_typo_letter(self, text, onehot_label):
+    def replace_with_typo_letter(self, text, label):
         """
         Replace a subword/letter with its homophones
         Args:
             text: a list of word tokens
-            onehot_label: onehot array indicate position of word that has already modified, so this
-            function only choose the word that does not have onehot label == 1.
+            label: onehot array indicate position of word that has already modified, so this
+            function only choose the word that does not get modified.
         return: True, text, onehot_label if successful replace, else False, None, None
         """
         # find index noise
-        idx = np.random.randint(0, len(onehot_label))
+        idx = np.random.randint(0, len(label))
         prevent_loop = 0
-        while onehot_label[idx] == 1 or text[idx].isnumeric() or text[idx] in string.punctuation:
-            idx = np.random.randint(0, len(onehot_label))
+        while label[idx] != 0 or has_numbers(text[idx]) or text[idx] in string.punctuation:
+            idx = np.random.randint(0, len(label))
             prevent_loop += 1
             if prevent_loop > 10:
-                return False, text, onehot_label
+                return False, text, label
 
         index_noise = idx
         word_noise = text[index_noise]
@@ -492,39 +361,214 @@ class SynthesizeData(object):
                 word_noise = word_noise[:j] + replaced + word_noise[j + 1:]
                 text[index_noise] = word_noise
 
-                onehot_label[index_noise] = 1
-                return True, text, onehot_label
+                label[index_noise] = 2
+                return True, text, label
 
-        return False, text, onehot_label
+        return False, text, label
 
-    def add_noise(self, sentence, percent_err=0.15, num_type_err=5):
+    def replace_with_homophone_word(self, text, label):
+        """
+        Replace a candidate word (if exist in the word_couple) with its homophone.
+        If succeeded, return True, else False
+
+        Args:
+            text: a list of word tokens
+            label: onehot array indicate position of word that has already modified, so this
+            function only choose the word that does not get modified.
+        return: True, text, onehot_label if successful replace, else False, text, onehot_label
+        """
+        candidates = []
+        for i in range(len(text)):
+            # account for the case that the word in the text is upper case but its lowercase match the candidates list
+            if text[i].lower() in self.all_word_candidates or text[i].lower() in self.teencode_dict.keys():
+                candidates.append((i, text[i]))
+
+        if len(candidates) == 0:
+            return False, text, label
+
+        idx = np.random.randint(0, len(candidates))
+        prevent_loop = 0
+        while label[candidates[idx][0]] != 0:
+            idx = np.random.choice(np.arange(0, len(candidates)))
+            prevent_loop += 1
+            if prevent_loop > 5:
+                return False, text, label
+
+        text[candidates[idx][0]] = self.replace_word_candidate(candidates[idx][1])
+        label[candidates[idx][0]] = 3
+        return True, text, label
+
+    def replace_with_random_letter(self, text, label):
+        """
+        Replace, add (or remove) a random letter in a random chosen word with a random letter
+        Args:
+            text: a list of word tokens
+            label: onehot array indicate position of word that has already modified, so this
+            function only choose the word that does not get modified.
+        return: a list of word tokens has one word that has been modified,
+                a list of onehot label indicate the position of words that has been modified.
+        """
+        idx = np.random.randint(0, len(label))
+        prevent_loop = 0
+        while label[idx] != 0 or has_numbers(text[idx]) \
+                or text[idx] in string.punctuation or len(text[idx]) < 2:
+            # Text with len == 1 could be removed unexpectedly
+            idx = np.random.randint(0, len(label))
+            prevent_loop += 1
+            if prevent_loop > 10:
+                return False, text, label
+
+        # replace, add or remove? 0 is replaced, 1 is added, 2 is removed
+        coin = np.random.choice([0, 1, 2])
+        if coin == 0:
+            chosen_letter = text[idx][np.random.randint(0, len(text[idx]))]
+            replaced = self.vn_alphabet[np.random.randint(0, self.alphabet_len)]
+            try:
+                text[idx] = re.sub(chosen_letter, replaced, text[idx])
+            except:
+                return False, text, label
+        elif coin == 1:
+            chosen_letter = text[idx][np.random.randint(0, len(text[idx]))]
+            replaced = chosen_letter + self.vn_alphabet[np.random.randint(0, self.alphabet_len)]
+            try:
+                text[idx] = re.sub(chosen_letter, replaced, text[idx])
+            except:
+                return False, text, label
+        else:
+            chosen_letter = text[idx][np.random.randint(0, len(text[idx]))]
+            try:
+                # Case string contains repeated word -> need count = 1
+                text[idx] = re.sub(chosen_letter, '', text[idx], count=1)
+            except:
+                return False, text, label
+
+        label[idx] = 4
+        return True, text, label
+
+    @staticmethod
+    def remove_diacritics(text, label):
+        """
+        Replace word which has diacritics with the same word without diacritics
+        Args:
+            text: a list of word tokens
+            label: onehot array indicate position of word that has already modified, so this
+            function only choose the word that does not get modified.
+        return: a list of word tokens has one word that its diacritics was removed,
+                a list of onehot label indicate the position of words that has been modified.
+        """
+        idx = np.random.randint(0, len(label))
+        prevent_loop = 0
+        while label[idx] != 0 or text[idx] == unidecode.unidecode(text[idx]) or text[idx] in string.punctuation:
+            idx = np.random.randint(0, len(label))
+            prevent_loop += 1
+            if prevent_loop > 10:
+                return False, text, label
+
+        label[idx] = 5
+        text[idx] = unidecode.unidecode(text[idx])
+        return True, text, label
+
+    def replace_char_noaccent(self, text, label):
+        """
+        ...
+        Args:
+            text: a list of word tokens
+            label: onehot array indicate position of word that has already modified, so this
+            function only choose the word that does not get modified.
+        return: a list of word tokens has one word that its diacritics was removed,
+                a list of onehot label indicate the position of words that has been modified.
+        """
+        # find index noise
+        idx = np.random.randint(0, len(label))
+        prevent_loop = 0
+        while label[idx] != 0 or has_numbers(text[idx]) or text[idx] in string.punctuation:
+            idx = np.random.randint(0, len(label))
+            prevent_loop += 1
+            if prevent_loop > 10:
+                return False, text, label
+
+        index_noise = idx
+        # onehot_label[index_noise] = 1
+        word_noise = text[index_noise]
+        for i in range(0, len(word_noise)):
+            char = word_noise[i]
+
+            if char in self.keyboard_neighbors:
+                neighbors = self.keyboard_neighbors[char]
+                idx_neigh = np.random.randint(0, len(neighbors))
+                replaced = neighbors[idx_neigh]
+                new_word = word_noise[:i] + replaced + word_noise[i + 1:]
+                if new_word == word_noise:
+                    continue
+
+                text[index_noise] = new_word
+                label[index_noise] = 6
+                return True, text, label
+
+        return False, text, label
+
+    def tokenize_str(self, sentence):
         tokens = self.tokenizer(sentence)
+        for i in range(len(tokens)):
+            if tokens[i] == "``" or tokens[i] == "''" or \
+                    tokens[i] == '”' or tokens[i] == '“':
+                tokens[i] = '"'
+        return tokens
+
+    def add_noise(self, sentence: str = None, origin_tokens: List[str] = None, percent_err=0.15):
+        """
+        Randomly add noise to the sentence
+
+        Args:
+            sentence: (str) an input sentence
+            origin_tokens: List of tokens
+            percent_err: (float) maximum percentage of masked tokens
+        Returns:
+            success: whether the function successfully added noise
+            origin_tokens: list of str of original tokens
+            synthesized_tokens: list of str of synthesized tokens
+            onehot_label: list of binary labels with 1 indicates misspelled token
+        """
+        if not sentence and not origin_tokens:
+            raise ValueError("Expect at least sentence or tokens to be not None")
+
+        if not origin_tokens:
+            origin_tokens = self.tokenize_str(sentence)
+
+        # Make sure original tokens is not changed
+        tokens = origin_tokens.copy()
+
         onehot_label = [0] * len(tokens)
+        success = False
+        all_passed = False
 
         num_wrong = int(np.ceil(percent_err * len(tokens)))
         num_wrong = np.random.randint(1, num_wrong + 1)
-        if np.random.rand() < 0.05:
-            num_wrong = 0
 
         for i in range(0, num_wrong):
-            err = np.random.randint(0, num_type_err + 1)
+            err = np.random.randint(1, 7)
 
-            if err == 0:
-                _, tokens, onehot_label = self.replace_with_homophone_letter(tokens, onehot_label)
-            elif err == 1:
-                _, tokens, onehot_label = self.replace_with_typo_letter(tokens, onehot_label)
+            if err == 1:
+                success, tokens, onehot_label = self.replace_with_homophone_letter(tokens, onehot_label)
             elif err == 2:
-                _, tokens, onehot_label = self.replace_with_homophone_word(tokens, onehot_label)
+                success, tokens, onehot_label = self.replace_with_typo_letter(tokens, onehot_label)
             elif err == 3:
-                _, tokens, onehot_label = self.replace_with_random_letter(tokens, onehot_label)
+                success, tokens, onehot_label = self.replace_with_homophone_word(tokens, onehot_label)
             elif err == 4:
-                _, tokens, onehot_label = self.remove_diacritics(tokens, onehot_label)
+                success, tokens, onehot_label = self.replace_with_random_letter(tokens, onehot_label)
             elif err == 5:
-                _, tokens, onehot_label = self.replace_char_noaccent(tokens, onehot_label)
+                success, tokens, onehot_label = self.remove_diacritics(tokens, onehot_label)
+            elif err == 6:
+                success, tokens, onehot_label = self.replace_char_noaccent(tokens, onehot_label)
             else:
                 continue
-            # print(tokens)
-        return ' '.join(tokens)
+            all_passed &= success
+
+        if not all_passed:
+            # Case we failed to add random noise
+            success, tokens, onehot_label = self.replace_with_random_letter(tokens, onehot_label)
+
+        return success, origin_tokens, tokens, onehot_label
 
 
 if __name__ == '__main__':
@@ -533,22 +577,20 @@ if __name__ == '__main__':
     txt = "Khoảng 13h30 ngày 7/6, nhiều ôtô biển xanh ra vào trụ sở Bộ Y tế trên phố Giảng Võ, chắc 10.2%" \
           "phường Kim Mã, quận Ba Đình, Hà Nội. Đến khoảng 14h20 cùng ngày (ngày 14/2), một cán bộ cảnh sát " \
           "ngồi trong chiếc xe biển xanh -\"công an\" tiếp tục đi vào trụ sở của cơ quan này."
-    tks = word_tokenize(txt)
-    print(tks)
-
-    synthesizer = SynthesizeData()
-
+    synthesizer = Synthesizer()
     count = 0
-    for _ in range(100):
-        tks = word_tokenize(txt)
-        _, tks, onehot = synthesizer.replace_with_typo_letter(tks, [0] * len(tks))
-        if sum(onehot) > 0:
+    for m in range(100):
+        s, o, f, lb = synthesizer.add_noise(sentence=txt)
+        if s:
             count += 1
+        if m == 50:
+            print(s)
+            print(o)
+            print(f)
+            print(lb)
+            print(sum(lb) / len(lb))
 
     print(f"Total: {count / 100:.5f}")
-
-    print(' '.join(tks))
-    print(onehot)
 
     # for z in range(len(onehot)):
     #     if onehot[z] == 1:
