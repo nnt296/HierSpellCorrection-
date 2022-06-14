@@ -4,7 +4,7 @@ from torch import nn
 
 def compute_detection_loss(
         detection_logits: torch.Tensor,
-        spelling_labels: torch.Tensor
+        detection_labels: torch.Tensor
 ):
     """
     Compute detection loss
@@ -15,14 +15,14 @@ def compute_detection_loss(
 
     Args:
         detection_logits: output of detection classifier of shape B x seq_len x 2
-        spelling_labels: binary label of shape B x seq_len
+        detection_labels: binary label of shape B x seq_len
                          0 for correct and 1 for incorrect
     Returns:
         loss
     """
     criteria = nn.CrossEntropyLoss()
 
-    loss = criteria(detection_logits.view(-1, 2), spelling_labels.view(-1))
+    loss = criteria(detection_logits.view(-1, 2), detection_labels.view(-1))
     # Normalize the loss based on length of the sequence
     # (Follow the paper but not sure if this has any effect)
     return loss
@@ -30,8 +30,8 @@ def compute_detection_loss(
 
 def compute_correct_loss(
         correction_logits: torch.Tensor,
-        spelling_labels: torch.Tensor,
-        tokens_labels: torch.Tensor,
+        detection_labels: torch.Tensor,
+        correction_labels: torch.Tensor,
         num_classes: int = 100
 ):
     """
@@ -42,18 +42,18 @@ def compute_correct_loss(
 
     Args:
         correction_logits: output of detection classifier of shape B x seq_len x num_vocab
-        spelling_labels: binary label of shape B x seq_len
-        tokens_labels: correct label of miss-spelled tokens of shape B x seq_len
+        detection_labels: binary label of shape B x seq_len
+        correction_labels: correct label of miss-spelled tokens of shape B x seq_len
         num_classes: number of label = num_vocab (indexes of word in vocab)
     Returns:
         loss
     """
     criteria = nn.CrossEntropyLoss()
-    _, seq_len = tokens_labels.shape
+    _, seq_len = correction_labels.shape
 
     _corr_logits = correction_logits.view(-1, num_classes)
-    _spelling_labels = spelling_labels.view(-1)
-    _tokens_labels = tokens_labels.view(-1)
+    _spelling_labels = detection_labels.view(-1)
+    _tokens_labels = correction_labels.view(-1)
 
     valid_indexes = torch.nonzero(_spelling_labels, as_tuple=True)[0]
 
