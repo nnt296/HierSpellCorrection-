@@ -31,8 +31,7 @@ def compute_detection_loss(
 def compute_correct_loss(
         correction_logits: torch.Tensor,
         detection_labels: torch.Tensor,
-        correction_labels: torch.Tensor,
-        num_classes: int = 100
+        correction_labels: torch.Tensor
 ):
     """
     Compute correction loss only on truly error tokens
@@ -44,12 +43,11 @@ def compute_correct_loss(
         correction_logits: output of detection classifier of shape B x seq_len x num_vocab
         detection_labels: binary label of shape B x seq_len
         correction_labels: correct label of miss-spelled tokens of shape B x seq_len
-        num_classes: number of label = num_vocab (indexes of word in vocab)
     Returns:
         loss
     """
     criteria = nn.CrossEntropyLoss()
-    _, seq_len = correction_labels.shape
+    num_classes = correction_logits.size(2)
 
     _corr_logits = correction_logits.view(-1, num_classes)
     _spelling_labels = detection_labels.view(-1)
@@ -85,5 +83,5 @@ if __name__ == '__main__':
     d_loss = compute_detection_loss(d_logits, sp_labels)
     print(d_loss)
 
-    c_loss = compute_correct_loss(c_logits, sp_labels, tk_labels, num_classes=num_vocab)
+    c_loss = compute_correct_loss(c_logits, sp_labels, tk_labels)
     print(c_loss)
