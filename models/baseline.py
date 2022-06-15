@@ -231,15 +231,14 @@ class AlbertSpellChecker(nn.Module):
         detection_logits = self.detection_head(word_outputs[0])
         correction_logits = self.correction_head(word_outputs[0])
 
-        if not correction_labels and not detection_labels:
+        if correction_labels is None and detection_labels is None:
             loss = None
-        elif correction_labels and detection_labels:
+        elif correction_labels is not None and detection_labels is not None:
             detection_loss = compute_detection_loss(detection_logits,
                                                     detection_labels)
             correction_loss = compute_correct_loss(correction_logits,
                                                    detection_labels,
-                                                   correction_labels,
-                                                   self.num_classes)
+                                                   correction_labels)
             loss = detection_loss + correction_loss
         else:
             raise ValueError("Expect both correction_labels and detection_labels or none of them.")
@@ -254,7 +253,7 @@ if __name__ == '__main__':
     char_cfg.num_attention_heads = 4  # Tobe update == 12
     char_cfg.max_position_embeddings = 16
     char_cfg.intermediate_size = 512  # Tobe update == 768
-    char_cfg.vocab_size = 222  # Tobe update == real vocab size
+    char_cfg.vocab_size = 172  # Tobe update == real vocab size
     char_cfg.pad_token_id = 0  # == position of [PAD]
     char_cfg.embedding_size = 128
     print(char_cfg)
@@ -266,7 +265,7 @@ if __name__ == '__main__':
     word_cfg.num_attention_heads = 4  # Tobe update == 12
     word_cfg.max_position_embeddings = 192
     word_cfg.intermediate_size = 512  # Tobe update == 3072
-    word_cfg.vocab_size = 333  # Tobe update == real vocab size
+    word_cfg.vocab_size = 300  # Tobe update == real vocab size
     word_cfg.pad_token_id = 0  # == position of [PAD]
     word_cfg.embedding_size = 128 + 256  # == Word Emb Size + Char Hidden Size
     word_cfg.word_embedding_size = 128
@@ -349,7 +348,7 @@ if __name__ == '__main__':
 
     model = AlbertSpellChecker(char_config=char_cfg, word_config=word_cfg)
 
-    d_logits, c_logits = model(
+    outputs = model(
         word_input_ids=inp_word["input_ids"],
         word_attention_mask=inp_word["attention_mask"],
         word_token_type_ids=inp_word["token_type_ids"],
@@ -359,4 +358,4 @@ if __name__ == '__main__':
         char_token_type_ids=inp_char["token_type_ids"]
     )
 
-    print(d_logits.shape, c_logits.shape)
+    print(outputs.detection_logits.shape, outputs.correction_logits.shape)
