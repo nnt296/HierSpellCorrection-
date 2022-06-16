@@ -9,7 +9,7 @@ from tokenizers.pre_tokenizers import WhitespaceSplit
 from tokenizers.processors import TemplateProcessing
 from nltk.tokenize import word_tokenize
 
-from models.common import SpecialTokens, all_special_tokens
+from utils.common import SpecialTokens, all_special_tokens
 
 
 class AbsPreTokenizer(metaclass=ABCMeta):
@@ -102,11 +102,11 @@ def create_tokenizer(corpus_path: str,
 if __name__ == '__main__':
     create_tokenizer("data/corpus_small.txt",
                      PreCharTokenizer(),
-                     300, 10,
+                     400, 10,
                      "spell_model/char_tokenizer.json")
     create_tokenizer("data/corpus_small.txt",
                      PreWordTokenizer(),
-                     300, 3,
+                     60000, 3,
                      "spell_model/word_tokenizer.json")
 
     # # Load from transformers library as follows

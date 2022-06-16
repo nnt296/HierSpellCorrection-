@@ -540,7 +540,6 @@ class Synthesizer(object):
 
         onehot_label = [0] * len(tokens)
         success = False
-        all_passed = False
 
         num_wrong = int(np.ceil(percent_err * len(tokens)))
         num_wrong = np.random.randint(1, num_wrong + 1)
@@ -562,9 +561,8 @@ class Synthesizer(object):
                 success, tokens, onehot_label = self.replace_char_noaccent(tokens, onehot_label)
             else:
                 continue
-            all_passed &= success
 
-        if not all_passed:
+        if not success:
             # Case we failed to add random noise
             success, tokens, onehot_label = self.replace_with_random_letter(tokens, onehot_label)
 

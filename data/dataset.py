@@ -187,7 +187,6 @@ class MisspelledDataset(Dataset):
         if not success:
             # If failed to add noise like case origin_tokens = ["35", "."]
             # We get another sample
-            print(f"ERROR: {origin_tokens}")
             return self.__getitem__(123)
 
         return success, origin_tokens, tokens, onehot_label
