@@ -5,7 +5,8 @@ import pytorch_lightning as pl
 
 from models.baseline import AlbertConfig, AlbertSpellChecker, SpellCheckerOutput
 from models.metrics import compute_detection_metrics, compute_correction_metrics
-from data.dataset import MisspelledDataset, custom_collator
+from data.dataset import MisspelledDataset, custom_collator, word_tokenizer, char_tokenizer
+from utils.debug_prediction import debug_prediction
 
 from params import Param
 
@@ -52,9 +53,27 @@ class SpellChecker(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         outputs = self(batch)
         loss = outputs["loss"]
+        detection_loss = outputs["detection_loss"]
+        correction_loss = outputs["correction_loss"]
 
         self.log("train_loss", loss, on_step=True, on_epoch=True,
                  prog_bar=True, logger=True, batch_size=self.params.BATCH_SIZE)
+        self.log("det_loss", detection_loss, on_step=True, on_epoch=True,
+                 prog_bar=True, logger=True, batch_size=self.params.BATCH_SIZE)
+        self.log("corr_loss", correction_loss, on_step=True, on_epoch=True,
+                 prog_bar=True, logger=True, batch_size=self.params.BATCH_SIZE)
+
+        if (batch_idx + 1) % self.params.DEBUG_PRED_EVERY_N_STEPS == 0:
+            debug_prediction(
+                detection_logits=outputs["detection_logits"],
+                correction_logits=outputs["correction_logits"],
+                word_token_ids=batch["correction_labels"],
+                char_token_ids=batch["char_input_ids"],
+                noise_token_ids=batch["word_input_ids"],
+                detection_labels=batch["detection_labels"],
+                word_tokenizer=word_tokenizer,
+                char_tokenizer=char_tokenizer
+            )
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -86,7 +105,8 @@ def main():
 
     # Define dataset
     train_ds = MisspelledDataset(corpus_dir=params.TRAIN_CORPUS_DIR,
-                                 percent_err=params.PERCENT_NOISE)
+                                 percent_err=params.PERCENT_NOISE,
+                                 min_num_tokens=params.MIN_NUM_TOKENS)
     train_loader = DataLoader(train_ds,
                               batch_size=params.BATCH_SIZE,
                               collate_fn=custom_collator,
@@ -94,7 +114,8 @@ def main():
                               drop_last=True)
 
     val_ds = MisspelledDataset(corpus_dir=params.VAL_CORPUS_DIR,
-                               percent_err=params.PERCENT_NOISE)
+                               percent_err=params.PERCENT_NOISE,
+                               min_num_tokens=params.MIN_NUM_TOKENS)
     val_loader = DataLoader(val_ds,
                             batch_size=params.BATCH_SIZE,
                             collate_fn=custom_collator,
@@ -107,7 +128,10 @@ def main():
     checker = SpellChecker(char_cfg, word_cfg, params)
     trainer = pl.Trainer(
         default_root_dir=params.RUN_DIR,
-        max_steps=params.NUM_ITER
+        max_steps=params.NUM_ITER,
+        accelerator="gpu",
+        devices=1,
+        log_every_n_steps=params.LOG_EVERY_N_STEPS
     )
     trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader)
 

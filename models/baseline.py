@@ -162,6 +162,8 @@ class SpellCheckerOutput(ModelOutput):
     Args:
         loss (`torch.FloatTensor` of shape `(1,)`, *optional*, returned when `labels` is provided) :
             Classification loss.
+        detection_loss:
+        correction_loss:
         detection_logits (`torch.FloatTensor` of shape `(batch_size, sequence_length, 2)`):
             Detection scores (before SoftMax).
         correction_logits (`torch.FloatTensor` of shape `(batch_size, sequence_length, vocab_length)`):
@@ -169,6 +171,8 @@ class SpellCheckerOutput(ModelOutput):
     """
 
     loss: Optional[torch.FloatTensor] = None
+    detection_loss: Optional[torch.FloatTensor] = None
+    correction_loss: Optional[torch.FloatTensor] = None
     detection_logits: Optional[torch.FloatTensor] = None
     correction_logits: Optional[torch.FloatTensor] = None
 
@@ -233,6 +237,8 @@ class AlbertSpellChecker(nn.Module):
 
         if correction_labels is None and detection_labels is None:
             loss = None
+            detection_loss = None
+            correction_loss = None
         elif correction_labels is not None and detection_labels is not None:
             detection_loss = compute_detection_loss(detection_logits,
                                                     detection_labels)
@@ -243,14 +249,14 @@ class AlbertSpellChecker(nn.Module):
         else:
             raise ValueError("Expect both correction_labels and detection_labels or none of them.")
 
-        return SpellCheckerOutput(loss, detection_logits, correction_logits)
+        return SpellCheckerOutput(loss, detection_loss, correction_loss, detection_logits, correction_logits)
 
 
 if __name__ == '__main__':
     char_cfg = AlbertConfig()
     char_cfg.hidden_size = 256
     char_cfg.num_hidden_layers = 4
-    char_cfg.num_attention_heads = 4  # Tobe update == 12
+    char_cfg.num_attention_heads = 8  # hidden_size % num_attention_heads == 0
     char_cfg.max_position_embeddings = 16
     char_cfg.intermediate_size = 512  # Tobe update == 768
     char_cfg.vocab_size = 172  # Tobe update == real vocab size
@@ -260,12 +266,12 @@ if __name__ == '__main__':
     char_cfg.save_pretrained(save_directory="./spell_model/char_model")
 
     word_cfg = AlbertConfig()
-    word_cfg.hidden_size = 256  # Tobe update == 768
-    word_cfg.num_hidden_layers = 4  # Tobe update == 12
-    word_cfg.num_attention_heads = 4  # Tobe update == 12
+    word_cfg.hidden_size = 768  # Tobe update == 768
+    word_cfg.num_hidden_layers = 12  # Tobe update == 12
+    word_cfg.num_attention_heads = 12  # Tobe update == 12
     word_cfg.max_position_embeddings = 192
-    word_cfg.intermediate_size = 512  # Tobe update == 3072
-    word_cfg.vocab_size = 300  # Tobe update == real vocab size
+    word_cfg.intermediate_size = 3072  # Tobe update == 3072
+    word_cfg.vocab_size = 4770  # Tobe update == real vocab size
     word_cfg.pad_token_id = 0  # == position of [PAD]
     word_cfg.embedding_size = 128 + 256  # == Word Emb Size + Char Hidden Size
     word_cfg.word_embedding_size = 128

@@ -8,18 +8,21 @@ class Param:
     DEVICE = "cpu"
 
     # Data
-    TRAIN_CORPUS_DIR = "/home/local/BM/Datasets/SpellNews/train"
-    VAL_CORPUS_DIR = "/home/local/BM/Datasets/SpellNews/val"
+    TRAIN_CORPUS_DIR = "/home/zte/thanhnn5/datasets/SpellNews/train"
+    VAL_CORPUS_DIR = "/home/zte/thanhnn5/datasets/SpellNews/val"
     PERCENT_NOISE = 0.3
+    MIN_NUM_TOKENS = 5
 
     # Training
-    NUM_ITER = 500
-    NUM_WARMUP_STEP = 100
-    BATCH_SIZE = 4
-    LOG_PER_ITER = 1
-    NUM_WORKER = 2
+    NUM_ITER = 23765 * 30
+    NUM_WARMUP_STEP = 6000
+    BATCH_SIZE = 8
+    NUM_WORKER = 8
     # lr will increase from 2e-5 to MAX_LR in iter 0 -> iter NUM_ITER * PCT_START, then decrease to 2e-5
     MAX_LR = 0.003
     WEIGHT_DECAY = 1e-2
 
+    # Logging
+    LOG_EVERY_N_STEPS = 1000
+    DEBUG_PRED_EVERY_N_STEPS = 5000
     RUN_DIR = 'runs/'
