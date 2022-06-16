@@ -118,13 +118,15 @@ class MisspelledDataset(Dataset):
     Create a synthesized misspelled dataset
     """
 
-    def __init__(self, corpus_dir: str):
+    def __init__(self, corpus_dir: str, percent_err: float = 0.2):
         """
         Args:
             corpus_dir: directory contains list of corpus_{idx}.txt files
+            percent_err: percentage of misspelled tokens to generate
         """
         super().__init__()
         self.corpus_dir = corpus_dir
+        self.percent_err = percent_err
         self.pre_word_tokenizer = pre_word_tokenizer
 
         stats_file = os.path.join(corpus_dir, "stats.json")
@@ -166,7 +168,7 @@ class MisspelledDataset(Dataset):
             return self.__getitem__(123)
 
         tokens = self.pre_word_tokenizer.pre_tokenize(line)
-        return self.synthesizer.add_noise(origin_tokens=tokens, percent_err=0.2)
+        return self.synthesizer.add_noise(origin_tokens=tokens, percent_err=self.percent_err)
 
 
 if __name__ == '__main__':

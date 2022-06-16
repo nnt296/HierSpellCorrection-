@@ -12,13 +12,13 @@ from nltk.tokenize import word_tokenize
 from models.common import SpecialTokens, all_special_tokens
 
 
-class CPreTokenizer(metaclass=ABCMeta):
+class AbsPreTokenizer(metaclass=ABCMeta):
     @abstractmethod
     def pre_tokenize(self, sequence: str) -> str:
         pass
 
 
-class PreWordTokenizer(CPreTokenizer):
+class PreWordTokenizer(AbsPreTokenizer):
     def __init__(self):
         super().__init__()
         self.normalizer = NFKC()
@@ -37,7 +37,7 @@ class PreWordTokenizer(CPreTokenizer):
         return tokens
 
 
-class PreCharTokenizer(CPreTokenizer):
+class PreCharTokenizer(AbsPreTokenizer):
     def __init__(self):
         super().__init__()
         self.normalizer = NFKC()
@@ -55,7 +55,7 @@ class PreCharTokenizer(CPreTokenizer):
         return tokens
 
 
-def read_file_generator(corpus_path: str, pre_tokenizer: CPreTokenizer):
+def read_file_generator(corpus_path: str, pre_tokenizer: AbsPreTokenizer):
     with open(corpus_path) as fp:
         while True:
             line = fp.readline()
@@ -66,7 +66,7 @@ def read_file_generator(corpus_path: str, pre_tokenizer: CPreTokenizer):
 
 
 def create_tokenizer(corpus_path: str,
-                     pre_tokenizer: CPreTokenizer,
+                     pre_tokenizer: AbsPreTokenizer,
                      vocab_size: int,
                      min_frequency: int,
                      save_path: str):
@@ -95,6 +95,7 @@ def create_tokenizer(corpus_path: str,
         show_progress=True,
         special_tokens=[SpecialTokens.pad, SpecialTokens.unk, SpecialTokens.cls, SpecialTokens.sep])
     tokenizer.train_from_iterator(corpus_generator, trainer=trainer)
+    print(f"Trained vocab size: {tokenizer.get_vocab_size(with_added_tokens=True)}")
     tokenizer.save(save_path)
 
 

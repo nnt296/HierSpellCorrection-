@@ -29,6 +29,8 @@ if __name__ == '__main__':
 
                     # Remove newline
                     text = text.replace("\r", "").replace("\n", " ")
+                    # Remove weird space char
+                    text = text.replace('\u200b', '')
 
                     for line in uts.sent_tokenize(text):
                         line = line.replace('\u200b', '')

@@ -85,18 +85,20 @@ def main():
     params = Param()
 
     # Define dataset
-    train_ds = MisspelledDataset(corpus_dir=params.TRAIN_CORPUS_DIR)
+    train_ds = MisspelledDataset(corpus_dir=params.TRAIN_CORPUS_DIR,
+                                 percent_err=params.PERCENT_NOISE)
     train_loader = DataLoader(train_ds,
                               batch_size=params.BATCH_SIZE,
                               collate_fn=custom_collator,
-                              num_workers=2,
+                              num_workers=params.NUM_WORKER,
                               drop_last=True)
 
-    val_ds = MisspelledDataset(corpus_dir=params.VAL_CORPUS_DIR)
+    val_ds = MisspelledDataset(corpus_dir=params.VAL_CORPUS_DIR,
+                               percent_err=params.PERCENT_NOISE)
     val_loader = DataLoader(val_ds,
                             batch_size=params.BATCH_SIZE,
                             collate_fn=custom_collator,
-                            num_workers=2,
+                            num_workers=params.NUM_WORKER,
                             drop_last=False)
 
     char_cfg = AlbertConfig().from_json_file("spell_model/char_model/config.json")
@@ -104,7 +106,7 @@ def main():
 
     checker = SpellChecker(char_cfg, word_cfg, params)
     trainer = pl.Trainer(
-        default_root_dir="runs/",
+        default_root_dir=params.RUN_DIR,
         max_steps=params.NUM_ITER
     )
     trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader)
