@@ -7,12 +7,12 @@ from collections import OrderedDict
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizerFast
 
 from utils.add_noise import Synthesizer
 from models.word_char_tokenizer import PreWordTokenizer, PreCharTokenizer
-from models.common import SpecialTokens, all_special_tokens
+from utils.common import SpecialTokens, all_special_tokens
 
 char_tokenizer = PreTrainedTokenizerFast(tokenizer_file="spell_model/char_tokenizer.json")
 word_tokenizer = PreTrainedTokenizerFast(tokenizer_file="spell_model/word_tokenizer.json")
@@ -83,10 +83,13 @@ def custom_collator(batch):
 
     # Create batch of char ids = batch(sent 1) "stack on" batch(sent 2)
     batch_sent_words = []
-    for word_ids in batch_synth_enc["input_ids"]:
-        words = word_tokenizer.convert_ids_to_tokens(word_ids)
-        for word in words:
-            # Treat all Word Special Tokens as [UNK]
+
+    _, seq_word_len = batch_synth_enc["input_ids"].shape
+    for sent_idx, synth_tokens in enumerate(batch_synth_tokens):
+        synth_tokens = synth_tokens.split()
+        synth_tokens = [SpecialTokens.cls] + synth_tokens[:seq_word_len - 2] + [SpecialTokens.sep]
+        synth_tokens = synth_tokens + [SpecialTokens.pad] * (seq_word_len - len(synth_tokens))
+        for word_idx, word in enumerate(synth_tokens):
             if word in all_special_tokens:
                 batch_sent_words.append(SpecialTokens.unk)
             else:
@@ -96,7 +99,8 @@ def custom_collator(batch):
     batch_char_enc = char_tokenizer(batch_char_tok, padding=True, truncation=True,
                                     max_length=num_max_char, return_tensors="pt")
 
-    assert (batch_char_enc["input_ids"].size(0) / len(batch_origin_tokens) == batch_synth_enc["input_ids"].size(1))
+    assert (batch_char_enc["input_ids"].size(0) / len(batch_origin_tokens) == batch_synth_enc["input_ids"].size(1)), \
+        f'ERROR {batch_char_enc["input_ids"].size(0)} {len(batch_origin_tokens)} {batch_synth_enc["input_ids"].size(1)}'
     assert (batch_synth_enc["input_ids"].size() == batch_correction_lbs.size() == batch_onehot_labels.size()), \
         f'[ERROR] {batch_synth_enc["input_ids"].size()} {batch_correction_lbs.size()} {batch_onehot_labels.size()}'
 
@@ -118,15 +122,20 @@ class MisspelledDataset(Dataset):
     Create a synthesized misspelled dataset
     """
 
-    def __init__(self, corpus_dir: str, percent_err: float = 0.2):
+    def __init__(self,
+                 corpus_dir: str,
+                 percent_err: float = 0.2,
+                 min_num_tokens: int = 5):
         """
         Args:
             corpus_dir: directory contains list of corpus_{idx}.txt files
             percent_err: percentage of misspelled tokens to generate
+            min_num_tokens: minimum number of tokens
         """
         super().__init__()
         self.corpus_dir = corpus_dir
         self.percent_err = percent_err
+        self.min_num_tokens = min_num_tokens
         self.pre_word_tokenizer = pre_word_tokenizer
 
         stats_file = os.path.join(corpus_dir, "stats.json")
@@ -167,13 +176,24 @@ class MisspelledDataset(Dataset):
             # Random and get another sentence
             return self.__getitem__(123)
 
-        tokens = self.pre_word_tokenizer.pre_tokenize(line)
-        return self.synthesizer.add_noise(origin_tokens=tokens, percent_err=self.percent_err)
+        origin_tokens = self.pre_word_tokenizer.pre_tokenize(line)
+        if len(origin_tokens) < self.min_num_tokens:
+            # If the sentence is too short, skip
+            return self.__getitem__(123)
+
+        success, origin_tokens, tokens, onehot_label = self.synthesizer.add_noise(
+            origin_tokens=origin_tokens, percent_err=self.percent_err)
+
+        if not success:
+            # If failed to add noise like case origin_tokens = ["35", "."]
+            # We get another sample
+            print(f"ERROR: {origin_tokens}")
+            return self.__getitem__(123)
+
+        return success, origin_tokens, tokens, onehot_label
 
 
 if __name__ == '__main__':
-    from tqdm import tqdm
-
     random.seed(31)
     np.random.seed(12)
 
@@ -193,7 +213,7 @@ if __name__ == '__main__':
             ['Trong', 'trận', 'đấu', 'thuộc', 'vong', '19', 'giải', 'V-League', '2017', 'trên', 'sân', 'Long', 'An',
              ',', 'đội', 'chủ', 'nhà', 'một', 'lần', 'nữa', 'lại', 'ddể', 'chiến', 'thắng', 'tuột', 'khỏi', 'tầm',
              'tby', 'ởù', 'đã', 'dẫn', 'truwớc', 'Sana', 'Khyánhy', 'Hoa', 'BVN', 'từ', 'rất', 'sớm', '.'],
-            [0, 0, 0, 0, 5, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 4, 6, 0, 0, 2, 0, 4, 0, 0,
+            [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 4, 6, 0, 0, 2, 0, 4, 0, 0,
              0, 0, 0, 0]
         ),
         (
