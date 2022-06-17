@@ -67,9 +67,9 @@ class SpellChecker(pl.LightningModule):
             debug_prediction(
                 detection_logits=outputs["detection_logits"],
                 correction_logits=outputs["correction_logits"],
-                word_token_ids=batch["correction_labels"],
-                char_token_ids=batch["char_input_ids"],
-                noise_token_ids=batch["word_input_ids"],
+                correction_labels=batch["correction_labels"],
+                char_input_ids=batch["char_input_ids"],
+                word_input_ids=batch["word_input_ids"],
                 detection_labels=batch["detection_labels"],
                 word_tokenizer=word_tokenizer,
                 char_tokenizer=char_tokenizer

@@ -541,8 +541,10 @@ class Synthesizer(object):
         onehot_label = [0] * len(tokens)
         success = False
 
-        num_wrong = int(np.ceil(percent_err * len(tokens)))
-        num_wrong = np.random.randint(1, num_wrong + 1)
+        # DataCollatorForLanguageModeling alike
+        p = np.ones_like(onehot_label) * percent_err
+        wrong_indexes = np.random.binomial(1, p)
+        num_wrong = max(1, sum(wrong_indexes))
 
         for i in range(0, num_wrong):
             err = np.random.randint(1, 7)

@@ -18,7 +18,13 @@ char_tokenizer = PreTrainedTokenizerFast(tokenizer_file="spell_model/char_tokeni
 word_tokenizer = PreTrainedTokenizerFast(tokenizer_file="spell_model/word_tokenizer.json")
 # Work around for missing pad_token
 char_tokenizer.pad_token = SpecialTokens.pad
+char_tokenizer.cls_token = SpecialTokens.cls
+char_tokenizer.sep_token = SpecialTokens.sep
+
 word_tokenizer.pad_token = SpecialTokens.pad
+word_tokenizer.cls_token = SpecialTokens.cls
+word_tokenizer.sep_token = SpecialTokens.sep
+
 pre_char_tokenizer = PreCharTokenizer()
 pre_word_tokenizer = PreWordTokenizer()
 
@@ -66,10 +72,10 @@ def custom_collator(batch):
             max_length = len(item) + 2
             max_idx = idx
 
-    batch_onehot_labels = [[0] + item + [0] * (max_length - len(item) - 1) for item in batch_onehot_labels]
+    batch_detection_lbs = [[0] + item + [0] * (max_length - len(item) - 1) for item in batch_onehot_labels]
     # Truncate to maximum number of words
-    batch_onehot_labels = [item[:num_max_word] for item in batch_onehot_labels]
-    batch_onehot_labels = torch.LongTensor(batch_onehot_labels)
+    batch_detection_lbs = [item[:num_max_word] for item in batch_detection_lbs]
+    batch_detection_lbs = torch.LongTensor(batch_detection_lbs)
 
     # Word/Char encoding
     batch_origin_tokens = [' '.join(tks) for tks in batch_origin_tokens]
@@ -103,12 +109,13 @@ def custom_collator(batch):
 
     assert (batch_char_enc["input_ids"].size(0) / len(batch_origin_tokens) == batch_synth_enc["input_ids"].size(1)), \
         f'ERROR {batch_char_enc["input_ids"].size(0)} {len(batch_origin_tokens)} {batch_synth_enc["input_ids"].size(1)}'
-    assert (batch_synth_enc["input_ids"].size() == batch_correction_lbs.size() == batch_onehot_labels.size()), \
-        f'[ERROR] {batch_synth_enc["input_ids"].size()} {batch_correction_lbs.size()} {batch_onehot_labels.size()}\n' \
+    assert (batch_synth_enc["input_ids"].size() == batch_correction_lbs.size() == batch_detection_lbs.size()), \
+        f'[ERROR] {batch_synth_enc["input_ids"].size()} {batch_correction_lbs.size()} {batch_detection_lbs.size()}\n' \
         f'{batch_origin_tokens[max_idx]}\n' \
         f'{batch_synth_tokens[max_idx]}'
 
-    batch_onehot_labels[batch_onehot_labels != 0] = 1
+    batch_detection_lbs[batch_detection_lbs != 0] = 1
+
     return {
         "word_input_ids": batch_synth_enc["input_ids"],
         "word_attention_mask": batch_synth_enc["attention_mask"],
@@ -117,7 +124,7 @@ def custom_collator(batch):
         "char_attention_mask": batch_char_enc["attention_mask"],
         "char_token_type_ids": batch_char_enc["token_type_ids"],
         "correction_labels": batch_correction_lbs,
-        "detection_labels": batch_onehot_labels
+        "detection_labels": batch_detection_lbs
     }
 
 

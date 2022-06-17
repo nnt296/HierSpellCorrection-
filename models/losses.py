@@ -38,6 +38,8 @@ def compute_correct_loss(
 
     Notes:
     This loss function MIGHT NOT MATCH the paper's L_correction
+    Tokens with indices set to `-100` are ignored
+    Loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
 
     Args:
         correction_logits: output of detection classifier of shape B x seq_len x num_vocab
@@ -50,19 +52,19 @@ def compute_correct_loss(
     num_classes = correction_logits.size(2)
 
     _corr_logits = correction_logits.view(-1, num_classes)
-    _spelling_labels = detection_labels.view(-1)
-    _tokens_labels = correction_labels.view(-1)
+    _det_labels = detection_labels.view(-1)
+    _corr_labels = correction_labels.view(-1)
 
-    valid_indexes = torch.nonzero(_spelling_labels, as_tuple=True)[0]
+    valid_indexes = torch.nonzero(_det_labels, as_tuple=True)[0]
 
     # Case correct batches, return 0
     if valid_indexes.size(0) == 0:
         return 0
 
     _corr_logits = torch.index_select(_corr_logits, 0, valid_indexes)
-    _tokens_labels = torch.index_select(_tokens_labels, 0, valid_indexes)
+    _corr_labels = torch.index_select(_corr_labels, 0, valid_indexes)
 
-    loss = criteria(_corr_logits, _tokens_labels)
+    loss = criteria(_corr_logits, _corr_labels)
     return loss
 
 
