@@ -6,6 +6,7 @@ from packaging import version
 import torch
 from torch import nn
 from transformers import AlbertConfig, AlbertModel
+from transformers.activations import ACT2FN
 from transformers.file_utils import ModelOutput
 from transformers.modeling_outputs import BaseModelOutputWithPooling
 
@@ -160,10 +161,12 @@ class SpellCheckerOutput(ModelOutput):
     """
     Base class for spell checker.
     Args:
-        loss (`torch.FloatTensor` of shape `(1,)`, *optional*, returned when `labels` is provided) :
-            Classification loss.
-        detection_loss:
-        correction_loss:
+        loss (`torch.FloatTensor` of shape `(1,)`, *optional*) :
+             Summed loss.
+        detection_loss: (`torch.FloatTensor` of shape `(1,)`, *optional*) :
+            Detection loss.
+        correction_loss: (`torch.FloatTensor` of shape `(1,)`, *optional*) :
+            Correction loss.
         detection_logits (`torch.FloatTensor` of shape `(batch_size, sequence_length, 2)`):
             Detection scores (before SoftMax).
         correction_logits (`torch.FloatTensor` of shape `(batch_size, sequence_length, vocab_length)`):
@@ -177,6 +180,55 @@ class SpellCheckerOutput(ModelOutput):
     correction_logits: Optional[torch.FloatTensor] = None
 
 
+class DetectionHead(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.layer_norm = nn.LayerNorm(config.word_embedding_size, eps=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.word_embedding_size)
+        self.decoder = nn.Linear(config.word_embedding_size, 2, bias=True)
+        self.activation = ACT2FN[config.hidden_act]
+
+    def forward(self, hidden_states):
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.activation(hidden_states)
+        hidden_states = self.layer_norm(hidden_states)
+        hidden_states = self.decoder(hidden_states)
+        prediction_scores = hidden_states
+        return prediction_scores
+
+
+class CorrectionHead(nn.Module):
+    def __init__(self,
+                 config,
+                 word_embeddings: Optional[nn.Embedding] = None):
+        """
+        Detection and Classification Head
+        Args:
+            config: word level configuration file
+            word_embeddings: the shared word embedding layer
+        """
+        super().__init__()
+
+        self.layer_norm = nn.LayerNorm(config.word_embedding_size, eps=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.word_embedding_size)
+        self.decoder = nn.Linear(config.word_embedding_size, config.vocab_size, bias=True)
+
+        if word_embeddings:
+            # https://github.com/pytorch/examples/blob/main/word_language_model/model.py#L31
+            self.decoder.weight = word_embeddings.weight
+
+        self.activation = ACT2FN[config.hidden_act]
+
+    def forward(self, hidden_states):
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.activation(hidden_states)
+        hidden_states = self.layer_norm(hidden_states)
+        hidden_states = self.decoder(hidden_states)
+
+        prediction_scores = hidden_states
+        return prediction_scores
+
+
 class AlbertSpellChecker(nn.Module):
     def __init__(self, char_config, word_config):
         super().__init__()
@@ -184,21 +236,10 @@ class AlbertSpellChecker(nn.Module):
 
         self.char_encoder = AlbertModel(char_config, add_pooling_layer=True)
         self.word_encoder = AlbertWordEncoder(word_config, add_pooling_layer=False)
-        self.detection_head = nn.Sequential(
-            nn.Dropout(p=word_config.classifier_dropout_prob),
-            nn.Linear(in_features=word_config.hidden_size, out_features=word_config.classifier_hidden_size),
-            nn.Tanh(),
-            nn.Dropout(p=word_config.classifier_dropout_prob),
-            nn.Linear(in_features=word_config.classifier_hidden_size, out_features=2),  # Binary correct or not
-        )
+        self.detection_head = DetectionHead(config=word_config)
 
-        self.correction_head = nn.Sequential(
-            nn.Dropout(p=word_config.classifier_dropout_prob),
-            nn.Linear(in_features=word_config.hidden_size, out_features=word_config.classifier_hidden_size),
-            nn.Tanh(),
-            nn.Dropout(p=word_config.classifier_dropout_prob),
-            nn.Linear(in_features=word_config.classifier_hidden_size, out_features=word_config.vocab_size)
-        )
+        self.correction_head = CorrectionHead(config=word_config,
+                                              word_embeddings=self.word_encoder.embeddings.word_embeddings)
 
     def forward(self,
                 word_input_ids: Optional[torch.LongTensor] = None,  # Shape B x Seq Len
@@ -258,7 +299,7 @@ if __name__ == '__main__':
     char_cfg.num_hidden_layers = 4
     char_cfg.num_attention_heads = 8  # hidden_size % num_attention_heads == 0
     char_cfg.max_position_embeddings = 16
-    char_cfg.intermediate_size = 512  # Tobe update == 768
+    char_cfg.intermediate_size = 2048  # Tobe update == 768
     char_cfg.vocab_size = 172  # Tobe update == real vocab size
     char_cfg.pad_token_id = 0  # == position of [PAD]
     char_cfg.embedding_size = 128
