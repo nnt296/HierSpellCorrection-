@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import underthesea as uts
 
-from utils.common import de_emojify
+from cleantext import remove_emoji
 
 
 if __name__ == '__main__':
@@ -33,7 +33,7 @@ if __name__ == '__main__':
                     text = text.replace("\r", "").replace("\n", " ")
                     # Remove weird space char
                     text = text.replace('\u200b', '')
-                    text = de_emojify(text)
+                    text = remove_emoji(text)
 
                     for line in uts.sent_tokenize(text):
                         if not line.strip():
