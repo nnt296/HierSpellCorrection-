@@ -4,6 +4,8 @@ import os
 import pandas as pd
 import underthesea as uts
 
+from utils.common import de_emojify
+
 
 if __name__ == '__main__':
     lines_per_file = pow(2, 15)
@@ -31,10 +33,9 @@ if __name__ == '__main__':
                     text = text.replace("\r", "").replace("\n", " ")
                     # Remove weird space char
                     text = text.replace('\u200b', '')
+                    text = de_emojify(text)
 
                     for line in uts.sent_tokenize(text):
-                        line = line.replace('\u200b', '')
-
                         if not line.strip():
                             continue
 

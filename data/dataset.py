@@ -12,7 +12,7 @@ from transformers import PreTrainedTokenizerFast
 
 from utils.add_noise import Synthesizer
 from models.word_char_tokenizer import PreWordTokenizer, PreCharTokenizer
-from utils.common import SpecialTokens, all_special_tokens
+from utils.common import SpecialTokens, all_special_tokens, de_emojify
 
 char_tokenizer = PreTrainedTokenizerFast(tokenizer_file="spell_model/char_tokenizer.json")
 word_tokenizer = PreTrainedTokenizerFast(tokenizer_file="spell_model/word_tokenizer.json")
@@ -183,6 +183,7 @@ class MisspelledDataset(Dataset):
 
         line = line.replace('\u200b', '')  # Work around for [​] char
         line = pattern.sub("", line).strip()
+        line = de_emojify(line)
         if not line:
             # Random and get another sentence
             return self.__getitem__(123)
