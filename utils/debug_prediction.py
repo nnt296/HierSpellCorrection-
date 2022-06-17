@@ -59,7 +59,7 @@ def debug_prediction(detection_logits: torch.FloatTensor,
             word_from_char = ''.join(word_from_char)
             noise_words[word_idx] = word_from_char
 
-    pad_idx = raw_words.index(SpecialTokens.pad)
+    pad_idx = raw_words.index(SpecialTokens.sep) + 1
     raw_words = raw_words[:pad_idx]
     noise_words = noise_words[:pad_idx]
 

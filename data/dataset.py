@@ -59,10 +59,12 @@ def custom_collator(batch):
 
     # Pad batch_onehot_labels to shape B x Seq Len
     max_length = 0
+    max_idx = 0
     # +2 accounts for [CLS] and [SEP]
-    for item in batch_onehot_labels:
+    for idx, item in enumerate(batch_onehot_labels):
         if len(item) + 2 > max_length:
             max_length = len(item) + 2
+            max_idx = idx
 
     batch_onehot_labels = [[0] + item + [0] * (max_length - len(item) - 1) for item in batch_onehot_labels]
     # Truncate to maximum number of words
@@ -102,7 +104,9 @@ def custom_collator(batch):
     assert (batch_char_enc["input_ids"].size(0) / len(batch_origin_tokens) == batch_synth_enc["input_ids"].size(1)), \
         f'ERROR {batch_char_enc["input_ids"].size(0)} {len(batch_origin_tokens)} {batch_synth_enc["input_ids"].size(1)}'
     assert (batch_synth_enc["input_ids"].size() == batch_correction_lbs.size() == batch_onehot_labels.size()), \
-        f'[ERROR] {batch_synth_enc["input_ids"].size()} {batch_correction_lbs.size()} {batch_onehot_labels.size()}'
+        f'[ERROR] {batch_synth_enc["input_ids"].size()} {batch_correction_lbs.size()} {batch_onehot_labels.size()}\n' \
+        f'{batch_origin_tokens[max_idx]}\n' \
+        f'{batch_synth_tokens[max_idx]}'
 
     batch_onehot_labels[batch_onehot_labels != 0] = 1
     return {

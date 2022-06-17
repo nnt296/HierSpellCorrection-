@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import List
 
+import re
 from tokenizers import Tokenizer
 from tokenizers.normalizers import NFKC
 from tokenizers.models import WordLevel
@@ -34,6 +35,8 @@ class PreWordTokenizer(AbsPreTokenizer):
             if tokens[i] == "``" or tokens[i] == "''" or \
                     tokens[i] == '”' or tokens[i] == '“':
                 tokens[i] = '"'
+            # Make sure token does not contain any whitespace
+            tokens[i] = re.sub(r"\s+", '', tokens[i])
         return tokens
 
 

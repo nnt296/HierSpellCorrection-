@@ -8,7 +8,7 @@ import underthesea as uts
 if __name__ == '__main__':
     lines_per_file = pow(2, 15)
 
-    root_dir = "/home/local/BM/Datasets/SpellNews"
+    root_dir = "/home/local/BM/Datasets/SpellNews/train"
     file_idx = 0
     file_name = os.path.join(root_dir, f"corpus_{file_idx}.txt")
     num_line = 0

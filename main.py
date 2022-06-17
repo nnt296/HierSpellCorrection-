@@ -56,11 +56,11 @@ class SpellChecker(pl.LightningModule):
         detection_loss = outputs["detection_loss"]
         correction_loss = outputs["correction_loss"]
 
-        self.log("train_loss", loss, on_step=True, on_epoch=True,
+        self.log("train_loss", loss, on_step=False, on_epoch=True,
                  prog_bar=True, logger=True, batch_size=self.params.BATCH_SIZE)
-        self.log("det_loss", detection_loss, on_step=True, on_epoch=True,
+        self.log("det_loss", detection_loss, on_step=True, on_epoch=False,
                  prog_bar=True, logger=True, batch_size=self.params.BATCH_SIZE)
-        self.log("corr_loss", correction_loss, on_step=True, on_epoch=True,
+        self.log("corr_loss", correction_loss, on_step=True, on_epoch=False,
                  prog_bar=True, logger=True, batch_size=self.params.BATCH_SIZE)
 
         if (batch_idx + 1) % self.params.DEBUG_PRED_EVERY_N_STEPS == 0:
