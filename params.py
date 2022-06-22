@@ -1,16 +1,14 @@
 from dataclasses import dataclass
 
-import torch
-
 
 @dataclass
 class Param:
     DEVICE = "cpu"
 
     # Data
-    TRAIN_CORPUS_DIR = "/home/zte/thanhnn5/datasets/SpellNews/train"
-    VAL_CORPUS_DIR = "/home/zte/thanhnn5/datasets/SpellNews/val"
-    PERCENT_NOISE = 0.3
+    TRAIN_CORPUS_DIR = "/home/chungvv/thanhnn5/datasets/SpellNews/train"
+    VAL_CORPUS_DIR = "/home/chungvv/thanhnn5/datasets/SpellNews/val"
+    PERCENT_NOISE = 0.2
     MIN_NUM_TOKENS = 5
 
     # Training

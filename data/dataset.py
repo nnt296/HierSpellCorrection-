@@ -103,6 +103,10 @@ def custom_collator(batch):
 
     batch_detection_lbs[batch_detection_lbs != 0] = 1
 
+    # Mark label of PADDING position to be -100, so this will not contribute to detection loss
+    padding_mask = batch_synth_enc["attention_mask"].type(torch.bool)
+    batch_detection_lbs[~padding_mask] = -100
+
     return {
         "word_input_ids": batch_synth_enc["input_ids"],
         "word_attention_mask": batch_synth_enc["attention_mask"],

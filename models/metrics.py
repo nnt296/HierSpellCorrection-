@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from sklearn.metrics import f1_score, precision_score, recall_score
@@ -19,6 +20,12 @@ def compute_detection_metrics(detection_logits: torch.FloatTensor,
 
     det_preds = det_preds.view(-1).cpu().numpy()  # Shape (Batch x Sequence Length) x 1
     det_labels = detection_labels.view(-1).cpu().numpy()  # Shape (Batch x Sequence Length) x 1
+
+    # Only take Non-padding position into account
+    # Accept other special character [CLS] [SEP] [UNK]
+    valid_index = np.where(det_labels >= 0)[0]
+    det_labels = det_labels[valid_index]
+    det_preds = det_preds[valid_index]
 
     # zero_division=0 to suppress warning when training
     f1 = f1_score(y_true=det_labels, y_pred=det_preds, zero_division=0)
@@ -47,7 +54,9 @@ def compute_correction_metrics(correction_logits: torch.FloatTensor,
     det_labels = detection_labels.view(-1)
     corr_labels = correction_labels.view(-1)
     corr_preds = corr_preds.view(-1)
-    valid_indexes = torch.nonzero(det_labels, as_tuple=True)[0]
+
+    # Only take error position into account
+    valid_indexes = torch.where(det_labels > 0)[0]
 
     # Case no error, return 0
     if valid_indexes.size(0) == 0:

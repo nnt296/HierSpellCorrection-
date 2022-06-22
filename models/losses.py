@@ -17,6 +17,7 @@ def compute_detection_loss(
         detection_logits: output of detection classifier of shape B x seq_len x 2
         detection_labels: binary label of shape B x seq_len
                          0 for correct and 1 for incorrect
+                         -100 to ignore
     Returns:
         loss
     """
@@ -55,7 +56,7 @@ def compute_correct_loss(
     _det_labels = detection_labels.view(-1)
     _corr_labels = correction_labels.view(-1)
 
-    valid_indexes = torch.nonzero(_det_labels, as_tuple=True)[0]
+    valid_indexes = torch.where(_det_labels > 0)[0]
 
     # Case correct batches, return 0
     if valid_indexes.size(0) == 0:
