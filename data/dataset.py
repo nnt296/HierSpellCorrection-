@@ -8,29 +8,15 @@ from collections import OrderedDict
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from transformers import PreTrainedTokenizerFast
 from cleantext import remove_emoji
 
 from utils.add_noise import Synthesizer
-from models.word_char_tokenizer import PreWordTokenizer, PreCharTokenizer
+from tokenizer import (
+    pre_char_tokenizer, pre_word_tokenizer,
+    char_tokenizer, word_tokenizer,
+    num_max_word, num_max_char
+)
 from utils.common import SpecialTokens, all_special_tokens
-
-char_tokenizer = PreTrainedTokenizerFast(tokenizer_file="spell_model/char_tokenizer.json")
-word_tokenizer = PreTrainedTokenizerFast(tokenizer_file="spell_model/word_tokenizer.json")
-# Work around for missing pad_token
-char_tokenizer.pad_token = SpecialTokens.pad
-char_tokenizer.cls_token = SpecialTokens.cls
-char_tokenizer.sep_token = SpecialTokens.sep
-
-word_tokenizer.pad_token = SpecialTokens.pad
-word_tokenizer.cls_token = SpecialTokens.cls
-word_tokenizer.sep_token = SpecialTokens.sep
-
-pre_char_tokenizer = PreCharTokenizer()
-pre_word_tokenizer = PreWordTokenizer()
-
-num_max_word = 192
-num_max_char = 16
 
 
 def get_key(item):
@@ -49,7 +35,7 @@ def custom_collator(batch):
     """
     Collator for misspelled dataset
     Args:
-        batch: list[success], list[origin_tokens], list[synth_tokens], list[onehot_labels]
+        batch: list[tuple(success, origin_tokens, synth_tokens, onehot_labels)]
     Returns:
         Dict {
             "word_input_ids": torch.LongTensor of shape batch x word_seq_length
