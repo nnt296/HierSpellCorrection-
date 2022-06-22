@@ -20,9 +20,10 @@ def compute_detection_metrics(detection_logits: torch.FloatTensor,
     det_preds = det_preds.view(-1).cpu().numpy()  # Shape (Batch x Sequence Length) x 1
     det_labels = detection_labels.view(-1).cpu().numpy()  # Shape (Batch x Sequence Length) x 1
 
-    f1 = f1_score(y_true=det_labels, y_pred=det_preds)
-    precision = precision_score(y_true=det_labels, y_pred=det_preds)
-    recall = recall_score(y_true=det_labels, y_pred=det_preds)
+    # zero_division=0 to suppress warning when training
+    f1 = f1_score(y_true=det_labels, y_pred=det_preds, zero_division=0)
+    precision = precision_score(y_true=det_labels, y_pred=det_preds, zero_division=0)
+    recall = recall_score(y_true=det_labels, y_pred=det_preds, zero_division=0)
 
     return {"f1": f1, "precision": precision, "recall": recall}, batch_size
 
@@ -55,9 +56,10 @@ def compute_correction_metrics(correction_logits: torch.FloatTensor,
     corr_preds = torch.index_select(corr_preds, 0, valid_indexes).cpu().numpy()  # Shape (num valid) x 1
     corr_labels = torch.index_select(corr_labels, 0, valid_indexes).cpu().numpy()  # Shape (num valid) x 1
 
-    f1 = f1_score(y_true=corr_labels, y_pred=corr_preds, average="micro")
-    precision = precision_score(y_true=corr_labels, y_pred=corr_preds, average="micro")
-    recall = recall_score(y_true=corr_labels, y_pred=corr_preds, average="micro")
+    # zero_division=0 to suppress warning when training
+    f1 = f1_score(y_true=corr_labels, y_pred=corr_preds, average="micro", zero_division=0)
+    precision = precision_score(y_true=corr_labels, y_pred=corr_preds, average="micro", zero_division=0)
+    recall = recall_score(y_true=corr_labels, y_pred=corr_preds, average="micro", zero_division=0)
 
     return {"f1": f1, "precision": precision, "recall": recall}, batch_size
 
