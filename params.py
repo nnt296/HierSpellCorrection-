@@ -14,12 +14,12 @@ class Param:
     MIN_NUM_TOKENS = 5
 
     # Training
-    NUM_ITER = 23765 * 30
+    NUM_ITER = 8414 * 60
     NUM_WARMUP_STEP = 6000
     BATCH_SIZE = 8
     NUM_WORKER = 8
     # lr will increase from 2e-5 to MAX_LR in iter 0 -> iter NUM_ITER * PCT_START, then decrease to 2e-5
-    MAX_LR = 0.003
+    MAX_LR = 1e-4
     WEIGHT_DECAY = 1e-2
 
     # Logging

@@ -88,13 +88,13 @@ class SpellChecker(pl.LightningModule):
                                                            detection_labels=batch["detection_labels"],
                                                            correction_labels=batch["correction_labels"])
 
-        self.log("det_f1", detection_metrics["f1"], on_epoch=True)
-        self.log("det_precision", detection_metrics["precision"], on_epoch=True)
-        self.log("det_recall", detection_metrics["recall"], on_epoch=True)
+        self.log("det_f1", detection_metrics["f1"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
+        self.log("det_precision", detection_metrics["precision"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
+        self.log("det_recall", detection_metrics["recall"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
 
-        self.log("corr_f1", correction_metrics["f1"], on_epoch=True)
-        self.log("corr_precision", correction_metrics["precision"], on_epoch=True)
-        self.log("corr_recall", correction_metrics["recall"], on_epoch=True)
+        self.log("corr_f1", correction_metrics["f1"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
+        self.log("corr_precision", correction_metrics["precision"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
+        self.log("corr_recall", correction_metrics["recall"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
 
         return outputs
 
@@ -128,7 +128,7 @@ def main():
     checker = SpellChecker(char_cfg, word_cfg, params)
     trainer = pl.Trainer(
         default_root_dir=params.RUN_DIR,
-        max_steps=params.NUM_ITER,
+        max_steps=params.NUM_ITER,  # Training steps only
         accelerator="gpu",
         devices=1,
         log_every_n_steps=params.LOG_EVERY_N_STEPS

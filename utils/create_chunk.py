@@ -2,22 +2,28 @@ import json
 import os
 
 import pandas as pd
-import underthesea as uts
+import regex
+# import underthesea as uts
 
 from cleantext import remove_emoji
 
+pattern = regex.compile(r"""
+[^aAàÀảẢãÃáÁạẠăĂằẰẳẲẵẴắẮặẶâÂầẦẩẨẫẪấẤậẬbBcCdDđĐeEèÈẻẺẽẼéÉẹẸêÊềỀểỂễỄếẾệỆ
+fFgGhHiIìÌỉỈĩĨíÍịỊjJkKlLmMnNoOòÒỏỎõÕóÓọỌôÔồỒổỔỗỖốỐộỘơƠờỜởỞỡỠớỚợỢpPqQrRs
+StTuUùÙủỦũŨúÚụỤưƯừỪửỬữỮứỨựỰvVwWxXyYỳỲỷỶỹỸýÝỵỴzZ0123456789!"#$%&'()*+,-.
+/:;<=>?@[\]^_`{|}~[:space:]]""")
 
 if __name__ == '__main__':
-    lines_per_file = pow(2, 15)
+    lines_per_file = pow(2, 12)
 
-    root_dir = "/home/local/BM/Datasets/SpellNews/train"
+    root_dir = "/home/local/BM/Datasets/SpellNews/val"
     file_idx = 0
     file_name = os.path.join(root_dir, f"corpus_{file_idx}.txt")
     num_line = 0
 
     big_corpus = "/home/local/BM/Datasets/BM/test.csv"
 
-    chunk_size = 10 ** 6
+    chunk_size = 10 ** 4
     with pd.read_csv(big_corpus, chunksize=chunk_size) as reader:
         fp = open(file_name, "a", encoding="utf-8")
 
@@ -34,12 +40,17 @@ if __name__ == '__main__':
                     # Remove weird space char
                     text = text.replace('\u200b', '')
                     text = remove_emoji(text)
+                    text = pattern.sub("", text).strip()
+                    if not text:
+                        continue
 
-                    for line in uts.sent_tokenize(text):
-                        if not line.strip():
+                    paragraphs = text.split("\n")
+                    for par in paragraphs:
+                        par = par.strip()
+                        if not par:
                             continue
 
-                        fp.write(f"{line.strip()}\n")
+                        fp.write(f"{par}\n")
                         num_line += 1
 
                         if num_line % lines_per_file == 0:

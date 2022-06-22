@@ -1,3 +1,5 @@
+import glob
+import os.path
 from abc import ABCMeta, abstractmethod
 from typing import List
 
@@ -59,13 +61,15 @@ class PreCharTokenizer(AbsPreTokenizer):
 
 
 def read_file_generator(corpus_path: str, pre_tokenizer: AbsPreTokenizer):
-    with open(corpus_path) as fp:
-        while True:
-            line = fp.readline()
-            if not line:
-                break
+    files = glob.glob(os.path.join(corpus_path, "*.txt"))
+    for file in files:
+        with open(file) as fp:
+            while True:
+                line = fp.readline()
+                if not line:
+                    break
 
-            yield pre_tokenizer.pre_tokenize(line)
+                yield pre_tokenizer.pre_tokenize(line)
 
 
 def create_tokenizer(corpus_path: str,
@@ -103,11 +107,11 @@ def create_tokenizer(corpus_path: str,
 
 
 if __name__ == '__main__':
-    create_tokenizer("data/corpus_small.txt",
+    create_tokenizer("/home/local/BM/Datasets/SpellNews/train",
                      PreCharTokenizer(),
                      400, 10,
                      "spell_model/char_tokenizer.json")
-    create_tokenizer("data/corpus_small.txt",
+    create_tokenizer("/home/local/BM/Datasets/SpellNews/train",
                      PreWordTokenizer(),
                      60000, 3,
                      "spell_model/word_tokenizer.json")

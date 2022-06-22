@@ -138,6 +138,7 @@ class MisspelledDataset(Dataset):
 
         stats_file = os.path.join(corpus_dir, "stats.json")
         self.stats = json.load(open(stats_file))
+        print(f"Stats: {self.stats}")
 
         self.lines_per_file = self.stats["lines_per_file"]
         self.num_lines = self.stats["total_lines"]
@@ -168,9 +169,10 @@ class MisspelledDataset(Dataset):
                 if count == line_idx:
                     break
 
-        line = line.replace('\u200b', '')  # Work around for [​] char
-        line = pattern.sub("", line).strip()
-        line = remove_emoji(line)
+        # Assume corpus is already preprocessed
+        # line = line.replace('\u200b', '')  # Work around for [​] char
+        # line = pattern.sub("", line).strip()
+        # line = remove_emoji(line)
         if not line:
             # Random and get another sentence
             return self.__getitem__(123)
@@ -179,6 +181,11 @@ class MisspelledDataset(Dataset):
         if len(origin_tokens) < self.min_num_tokens:
             # If the sentence is too short, skip
             return self.__getitem__(123)
+
+        # Randomly chunk <num_max_word> of a lengthy text
+        if len(origin_tokens) > num_max_word:
+            start = random.randint(0, len(origin_tokens) - num_max_word - 1)
+            origin_tokens = origin_tokens[start: start + num_max_word]
 
         success, origin_tokens, tokens, onehot_label = self.synthesizer.add_noise(
             origin_tokens=origin_tokens, percent_err=self.percent_err)
