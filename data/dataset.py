@@ -24,13 +24,6 @@ def get_key(item):
     return int(item.rsplit('.', 1)[0].rsplit('_', 1)[1])
 
 
-pattern = regex.compile(r"""
-[^aAàÀảẢãÃáÁạẠăĂằẰẳẲẵẴắẮặẶâÂầẦẩẨẫẪấẤậẬbBcCdDđĐeEèÈẻẺẽẼéÉẹẸêÊềỀểỂễỄếẾệỆ
-fFgGhHiIìÌỉỈĩĨíÍịỊjJkKlLmMnNoOòÒỏỎõÕóÓọỌôÔồỒổỔỗỖốỐộỘơƠờỜởỞỡỠớỚợỢpPqQrRs
-StTuUùÙủỦũŨúÚụỤưƯừỪửỬữỮứỨựỰvVwWxXyYỳỲỷỶỹỸýÝỵỴzZ0123456789!"#$%&'()*+,-.
-/:;<=>?@[\]^_`{|}~[:space:]]""")
-
-
 def custom_collator(batch):
     """
     Collator for misspelled dataset

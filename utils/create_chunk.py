@@ -1,15 +1,10 @@
 import json
 import os
-import regex
+from tokenizers.normalizers import NFKC
 # import underthesea as uts
 
 from cleantext import remove_emoji
 
-pattern = regex.compile(r"""
-[^aAàÀảẢãÃáÁạẠăĂằẰẳẲẵẴắẮặẶâÂầẦẩẨẫẪấẤậẬbBcCdDđĐeEèÈẻẺẽẼéÉẹẸêÊềỀểỂễỄếẾệỆ
-fFgGhHiIìÌỉỈĩĨíÍịỊjJkKlLmMnNoOòÒỏỎõÕóÓọỌôÔồỒổỔỗỖốỐộỘơƠờỜởỞỡỠớỚợỢpPqQrRs
-StTuUùÙủỦũŨúÚụỤưƯừỪửỬữỮứỨựỰvVwWxXyYỳỲỷỶỹỸýÝỵỴzZ0123456789!"#$%&'()*+,-.
-/:;<=>?@[\]^_`{|}~[:space:]]""")
 
 if __name__ == '__main__':
     lines_per_file = pow(2, 15)
@@ -29,11 +24,11 @@ if __name__ == '__main__':
                 break
 
             # Remove newline
+            text = NFKC().normalize_str(text)
             text = text.replace("\r", "").replace("\n", " ")
             # Remove weird space char
             text = text.replace('\u200b', '')
             text = remove_emoji(text)
-            text = pattern.sub("", text).strip()
             text = text.replace('\n', ' ')
             if not text:
                 continue

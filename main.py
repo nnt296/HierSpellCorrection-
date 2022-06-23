@@ -1,3 +1,6 @@
+from typing import Any
+
+import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from transformers import get_constant_schedule_with_warmup
@@ -35,18 +38,6 @@ class SpellChecker(pl.LightningModule):
             "lr_scheduler": scheduler
         }
 
-    def train_dataloader(self):
-        pass
-
-    def test_dataloader(self):
-        pass
-
-    def val_dataloader(self):
-        pass
-
-    def predict_dataloader(self):
-        pass
-
     def forward(self, inputs) -> SpellCheckerOutput:
         return self.model(**inputs)
 
@@ -82,21 +73,45 @@ class SpellChecker(pl.LightningModule):
         loss = outputs["loss"]
         self.log("val_loss", loss, on_epoch=True, batch_size=self.params.BATCH_SIZE)
 
-        detection_metrics, batch_sz = compute_detection_metrics(detection_logits=outputs["detection_logits"],
-                                                                detection_labels=batch["detection_labels"])
-        correction_metrics, _ = compute_correction_metrics(correction_logits=outputs["correction_logits"],
-                                                           detection_labels=batch["detection_labels"],
-                                                           correction_labels=batch["correction_labels"])
-
-        self.log("det_f1", detection_metrics["f1"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
-        self.log("det_precision", detection_metrics["precision"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
-        self.log("det_recall", detection_metrics["recall"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
-
-        self.log("corr_f1", correction_metrics["f1"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
-        self.log("corr_precision", correction_metrics["precision"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
-        self.log("corr_recall", correction_metrics["recall"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
-
+        self.compute_metrics(outputs=outputs,
+                             detection_labels=batch["detection_labels"],
+                             correction_labels=batch["correction_labels"])
         return outputs
+
+    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0):
+        # # Batch from wiki_spelling_collator()
+        # _ = batch.pop("correction_labels")
+        # detection_labels = batch.pop("detection_labels")
+        #
+        # outputs = self(batch)
+        # # Infer detection metrics for now, since fixing seems complicated
+        # self.compute_metrics(outputs=outputs,
+        #                      detection_labels=detection_labels,
+        #                      correction_labels=None)
+        pass
+
+    def compute_metrics(self,
+                        outputs: SpellCheckerOutput,
+                        detection_labels: torch.LongTensor = None,
+                        correction_labels: torch.LongTensor = None):
+        """
+        Compute and log metrics based on model's outputs and labels
+        """
+        bz = self.params.BATCH_SIZE
+        if detection_labels is not None:
+            detection_metrics, batch_sz = compute_detection_metrics(detection_logits=outputs["detection_logits"],
+                                                                    detection_labels=detection_labels)
+            self.log("det_f1", detection_metrics["f1"], on_epoch=True, batch_size=bz)
+            self.log("det_precision", detection_metrics["precision"], on_epoch=True, batch_size=bz)
+            self.log("det_recall", detection_metrics["recall"], on_epoch=True, batch_size=bz)
+
+        if correction_labels is not None and detection_labels is not None:
+            correction_metrics, _ = compute_correction_metrics(correction_logits=outputs["correction_logits"],
+                                                               detection_labels=detection_labels,
+                                                               correction_labels=correction_labels)
+            self.log("corr_f1", correction_metrics["f1"], on_epoch=True, batch_size=bz)
+            self.log("corr_precision", correction_metrics["precision"], on_epoch=True, batch_size=bz)
+            self.log("corr_recall", correction_metrics["recall"], on_epoch=True, batch_size=bz)
 
 
 def main():
@@ -125,13 +140,17 @@ def main():
     char_cfg = AlbertConfig().from_json_file("spell_model/char_model/config.json")
     word_cfg = AlbertConfig().from_json_file("spell_model/word_model/config.json")
 
+    ckpt_callback = pl.callbacks.ModelCheckpoint(save_last=True,
+                                                 every_n_train_steps=params.SAVE_N_STEP)
+
     checker = SpellChecker(char_cfg, word_cfg, params)
     trainer = pl.Trainer(
         default_root_dir=params.RUN_DIR,
         max_steps=params.NUM_ITER,  # Training steps only
         accelerator="gpu",
         devices=1,
-        log_every_n_steps=params.LOG_EVERY_N_STEPS
+        log_every_n_steps=params.LOG_EVERY_N_STEPS,
+        callbacks=[ckpt_callback]
     )
     trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader)
 

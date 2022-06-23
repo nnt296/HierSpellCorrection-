@@ -2,7 +2,7 @@ import random
 from typing import List
 
 import numpy as np
-import re
+import regex
 import unidecode
 from nltk.tokenize import word_tokenize
 import string
@@ -11,16 +11,16 @@ import string
 # import nltk
 # nltk.download('punkt')
 
-def has_numbers(text):
-    return bool(re.search(r'\d', text))
+non_vocab_pattern = regex.compile(r"""[^aAàÀảẢãÃáÁạẠăĂằẰẳẲẵẴắẮặẶâÂầẦẩẨẫẪấẤậẬbBcCdDđĐeEèÈẻẺẽẼéÉẹẸêÊềỀểỂễỄếẾệỆfFgGhHiIìÌỉỈĩĨíÍịỊjJkKlLmMnNoOòÒỏỎõÕóÓọỌôÔồỒổỔỗỖốỐộỘơƠờỜởỞỡỠớỚợỢpPqQrRsStTuUùÙủỦũŨúÚụỤưƯừỪửỬữỮứỨựỰvVwWxXyYỳỲỷỶỹỸýÝỵỴzZ0123456789!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~[:space:]]""")
+
+
+def has_numbers_or_non_latin(text):
+    return bool(regex.search(r'\d', text)) or bool(non_vocab_pattern.search(text))
 
 
 class Synthesizer(object):
     """
     Utils class to create artificial miss-spelled words
-    Args:
-        vocab_path: path to vocab file.
-                    Vocab file is expected to be a set of words, separate by ' ', no newline character.
     """
 
     def __init__(self):
@@ -311,7 +311,7 @@ class Synthesizer(object):
         candidates = []
         for i in range(len(text)):
             for char in self.all_char_candidates:
-                if re.search(char, text[i]) is not None:
+                if regex.search(char, text[i]) is not None:
                     candidates.append((i, char))
                     break
 
@@ -327,7 +327,7 @@ class Synthesizer(object):
                     return False, text, label
 
             replaced = self.replace_char_candidate(candidates[idx][1])
-            text[candidates[idx][0]] = re.sub(candidates[idx][1], replaced, text[candidates[idx][0]])
+            text[candidates[idx][0]] = regex.sub(candidates[idx][1], replaced, text[candidates[idx][0]])
 
             label[candidates[idx][0]] = 1
             return True, text, label
@@ -344,7 +344,7 @@ class Synthesizer(object):
         # find index noise
         idx = np.random.randint(0, len(label))
         prevent_loop = 0
-        while label[idx] != 0 or has_numbers(text[idx]) or text[idx] in string.punctuation:
+        while label[idx] != 0 or has_numbers_or_non_latin(text[idx]) or text[idx] in string.punctuation:
             idx = np.random.randint(0, len(label))
             prevent_loop += 1
             if prevent_loop > 10:
@@ -410,7 +410,7 @@ class Synthesizer(object):
         """
         idx = np.random.randint(0, len(label))
         prevent_loop = 0
-        while label[idx] != 0 or has_numbers(text[idx]) \
+        while label[idx] != 0 or has_numbers_or_non_latin(text[idx]) \
                 or text[idx] in string.punctuation or len(text[idx]) < 2:
             # Text with len == 1 could be removed unexpectedly
             idx = np.random.randint(0, len(label))
@@ -424,21 +424,21 @@ class Synthesizer(object):
             chosen_letter = text[idx][np.random.randint(0, len(text[idx]))]
             replaced = self.vn_alphabet[np.random.randint(0, self.alphabet_len)]
             try:
-                text[idx] = re.sub(chosen_letter, replaced, text[idx])
+                text[idx] = regex.sub(chosen_letter, replaced, text[idx])
             except:
                 return False, text, label
         elif coin == 1:
             chosen_letter = text[idx][np.random.randint(0, len(text[idx]))]
             replaced = chosen_letter + self.vn_alphabet[np.random.randint(0, self.alphabet_len)]
             try:
-                text[idx] = re.sub(chosen_letter, replaced, text[idx])
+                text[idx] = regex.sub(chosen_letter, replaced, text[idx])
             except:
                 return False, text, label
         else:
             chosen_letter = text[idx][np.random.randint(0, len(text[idx]))]
             try:
                 # Case string contains repeated word -> need count = 1
-                text[idx] = re.sub(chosen_letter, '', text[idx], count=1)
+                text[idx] = regex.sub(chosen_letter, '', text[idx], count=1)
             except:
                 return False, text, label
 
@@ -458,7 +458,8 @@ class Synthesizer(object):
         """
         idx = np.random.randint(0, len(label))
         prevent_loop = 0
-        while label[idx] != 0 or text[idx] == unidecode.unidecode(text[idx]) or text[idx] in string.punctuation:
+        while label[idx] != 0 or has_numbers_or_non_latin(text[idx]) or \
+                text[idx] == unidecode.unidecode(text[idx]) or text[idx] in string.punctuation:
             idx = np.random.randint(0, len(label))
             prevent_loop += 1
             if prevent_loop > 10:
@@ -481,7 +482,7 @@ class Synthesizer(object):
         # find index noise
         idx = np.random.randint(0, len(label))
         prevent_loop = 0
-        while label[idx] != 0 or has_numbers(text[idx]) or text[idx] in string.punctuation:
+        while label[idx] != 0 or has_numbers_or_non_latin(text[idx]) or text[idx] in string.punctuation:
             idx = np.random.randint(0, len(label))
             prevent_loop += 1
             if prevent_loop > 10:

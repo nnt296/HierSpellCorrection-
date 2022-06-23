@@ -12,7 +12,7 @@ class Param:
     MIN_NUM_TOKENS = 5
 
     # Training
-    NUM_ITER = int(219661 * 2.5)
+    NUM_ITER = int(219661 * 3)
     NUM_WARMUP_STEP = 6000
     BATCH_SIZE = 8
     NUM_WORKER = 8
@@ -20,7 +20,8 @@ class Param:
     MAX_LR = 1e-4
     WEIGHT_DECAY = 1e-2
 
-    # Logging
+    # Logging & saving
     LOG_EVERY_N_STEPS = 1000
     DEBUG_PRED_EVERY_N_STEPS = 5000
     RUN_DIR = 'runs/'
+    SAVE_N_STEP = 120000
