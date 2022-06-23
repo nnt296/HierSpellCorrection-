@@ -6,13 +6,13 @@ class Param:
     DEVICE = "cpu"
 
     # Data
-    TRAIN_CORPUS_DIR = "/home/chungvv/thanhnn5/datasets/SpellNews/train"
-    VAL_CORPUS_DIR = "/home/chungvv/thanhnn5/datasets/SpellNews/val"
+    TRAIN_CORPUS_DIR = "./data/train"
+    VAL_CORPUS_DIR = "./data/val"
     PERCENT_NOISE = 0.2
     MIN_NUM_TOKENS = 5
 
     # Training
-    NUM_ITER = 8414 * 60
+    NUM_ITER = int(219661 * 2.5)
     NUM_WARMUP_STEP = 6000
     BATCH_SIZE = 8
     NUM_WORKER = 8

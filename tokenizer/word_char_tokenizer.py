@@ -107,11 +107,11 @@ def create_tokenizer(corpus_path: str,
 
 
 if __name__ == '__main__':
-    create_tokenizer("/home/zte/thanhnn5/datasets/SpellNews/train",
+    create_tokenizer("./data/train",
                      PreCharTokenizer(),
                      400, 10,
                      "spell_model/char_tokenizer.json")
-    create_tokenizer("/home/zte/thanhnn5/datasets/SpellNews/train",
+    create_tokenizer("./data/train",
                      PreWordTokenizer(),
                      60000, 8,
                      "spell_model/word_tokenizer.json")
