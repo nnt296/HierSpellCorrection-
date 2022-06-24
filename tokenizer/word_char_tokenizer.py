@@ -5,7 +5,7 @@ from typing import List
 
 import re
 from tokenizers import Tokenizer
-from tokenizers.normalizers import NFKC
+from tokenizers.normalizers import NFKC, Lowercase, Sequence
 from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
 from tokenizers.pre_tokenizers import WhitespaceSplit
@@ -24,7 +24,7 @@ class AbsPreTokenizer(metaclass=ABCMeta):
 class PreWordTokenizer(AbsPreTokenizer):
     def __init__(self):
         super().__init__()
-        self.normalizer = NFKC()
+        self.normalizer = Sequence([NFKC(), Lowercase()])
 
     def pre_tokenize(self, sequence: str) -> List[str]:
         # strip() -> Normalize NFC -> nltk tokenizer
@@ -45,7 +45,7 @@ class PreWordTokenizer(AbsPreTokenizer):
 class PreCharTokenizer(AbsPreTokenizer):
     def __init__(self):
         super().__init__()
-        self.normalizer = NFKC()
+        self.normalizer = Sequence([NFKC(), Lowercase()])
 
     def pre_tokenize(self, sequence: str) -> List[str]:
         # strip() -> Normalize NFC -> nltk tokenizer

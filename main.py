@@ -128,6 +128,8 @@ def main():
                               num_workers=params.NUM_WORKER,
                               drop_last=True)
 
+    # This validation dataset is inconsistent between epoch,
+    # since we randomly select a sentence, add noise and chunk
     val_ds = MisspelledDataset(corpus_dir=params.VAL_CORPUS_DIR,
                                percent_err=params.PERCENT_NOISE,
                                min_num_tokens=params.MIN_NUM_TOKENS)

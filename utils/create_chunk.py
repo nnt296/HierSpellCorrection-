@@ -9,7 +9,7 @@ from cleantext import remove_emoji
 if __name__ == '__main__':
     lines_per_file = pow(2, 15)
 
-    root_dir = "/home/chungvv/thanhnn5/datasets/SpellNews/train"
+    root_dir = "./data/train"
     file_idx = 0
     file_name = os.path.join(root_dir, f"corpus_{file_idx}.txt")
     num_line = 0

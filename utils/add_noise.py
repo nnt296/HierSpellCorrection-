@@ -77,6 +77,7 @@ class Synthesizer(object):
             "ý": "ys", "ỳ": "yf", "ỷ": "yr", "ỵ": "yj",
             "đ": "dd",
 
+            # This mapping does not affect lowercase input
             "Á": "As", "À": "Af", "Ả": "Ar", "Ã": "Ax", "Ạ": "Aj",
             "Ă": "Aw", "Ắ": "Aws", "Ằ": "Awf", "Ẳ": "Awr", "Ẵ": "Awx", "Ặ": "Awj",
             "Â": "Aa", "Ấ": "Aas", "Ầ": "Aaf",

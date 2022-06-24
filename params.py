@@ -12,7 +12,7 @@ class Param:
     MIN_NUM_TOKENS = 5
 
     # Training
-    NUM_ITER = int(219661 * 3)
+    NUM_ITER = int(219661 * 5)
     NUM_WARMUP_STEP = 6000
     BATCH_SIZE = 8
     NUM_WORKER = 8
