@@ -3,7 +3,12 @@ from typing import Any
 import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
-from transformers import get_constant_schedule_with_warmup
+from transformers import (
+    get_constant_schedule_with_warmup,
+    get_constant_schedule,
+    get_polynomial_decay_schedule_with_warmup,
+    get_cosine_schedule_with_warmup
+)
 import pytorch_lightning as pl
 
 from models.baseline import AlbertConfig, AlbertSpellChecker, SpellCheckerOutput
@@ -27,16 +32,34 @@ class SpellChecker(pl.LightningModule):
         self.word_cfg = word_config
         self.model = AlbertSpellChecker(self.char_cfg, self.word_cfg)
 
-    def configure_optimizers(self):
+    def _config_optimizers_finetune(self):
+        # Hacky way to fine tune with new learning rate: replace the optimizer and scheduler
+        print("[INFO] config for finetuning")
         optimizer = AdamW(self.model.parameters(), lr=self.params.MAX_LR,
                           betas=(0.9, 0.998), eps=1e-8, weight_decay=self.params.WEIGHT_DECAY)
-        scheduler = get_constant_schedule_with_warmup(optimizer=optimizer,
-                                                      num_warmup_steps=self.params.NUM_WARMUP_STEP,
-                                                      last_epoch=-1)
+        scheduler = get_constant_schedule(optimizer=optimizer)
         return {
             "optimizer": optimizer,
             "lr_scheduler": scheduler
         }
+
+    def _config_optimizers_start(self):
+        print("[INFO] config for fresh start")
+        optimizer = AdamW(self.model.parameters(), lr=self.params.MAX_LR,
+                          betas=(0.9, 0.998), eps=1e-8, weight_decay=self.params.WEIGHT_DECAY)
+        scheduler = get_cosine_schedule_with_warmup(optimizer=optimizer,
+                                                    num_training_steps=self.params.NUM_ITER,
+                                                    num_warmup_steps=self.params.NUM_WARMUP_STEP)
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": scheduler
+        }
+
+    def configure_optimizers(self):
+        if self.params.IS_FINETUNE:
+            return self._config_optimizers_finetune()
+        else:
+            return self._config_optimizers_start()
 
     def forward(self, inputs) -> SpellCheckerOutput:
         return self.model(**inputs)
@@ -70,8 +93,9 @@ class SpellChecker(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         outputs = self(batch)
 
-        loss = outputs["loss"]
-        self.log("val_loss", loss, on_epoch=True, batch_size=self.params.BATCH_SIZE)
+        self.log("val_det_loss", outputs["detection_loss"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
+        self.log("val_corr_loss", outputs["correction_loss"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
+        self.log("val_loss", outputs["loss"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
 
         self.compute_metrics(outputs=outputs,
                              detection_labels=batch["detection_labels"],
@@ -144,17 +168,20 @@ def main():
 
     ckpt_callback = pl.callbacks.ModelCheckpoint(save_last=True,
                                                  every_n_train_steps=params.SAVE_N_STEP)
+    lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
     checker = SpellChecker(char_cfg, word_cfg, params)
+
     trainer = pl.Trainer(
         default_root_dir=params.RUN_DIR,
         max_steps=params.NUM_ITER,  # Training steps only
         accelerator="gpu",
         devices=1,
         log_every_n_steps=params.LOG_EVERY_N_STEPS,
-        callbacks=[ckpt_callback]
+        callbacks=[ckpt_callback, lr_monitor]
     )
-    trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader,
+                ckpt_path="runs/lightning_logs/version_1/checkpoints/last.ckpt")
 
 
 if __name__ == '__main__':
