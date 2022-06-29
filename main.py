@@ -10,6 +10,7 @@ from transformers import (
     get_cosine_schedule_with_warmup
 )
 import pytorch_lightning as pl
+from pytorch_lightning.strategies import DDPStrategy
 
 from models.baseline import AlbertConfig, AlbertSpellChecker, SpellCheckerOutput
 from models.metrics import compute_detection_metrics, compute_correction_metrics
@@ -32,34 +33,62 @@ class SpellChecker(pl.LightningModule):
         self.word_cfg = word_config
         self.model = AlbertSpellChecker(self.char_cfg, self.word_cfg)
 
-    def _config_optimizers_finetune(self):
+    def exclude_from_wt_decay(self, named_params, weight_decay, skip_list=("LayerNorm", "layer_norm", "bias")):
+        params = []
+        excluded_params = []
+
+        for name, param in named_params:
+            if not param.requires_grad:
+                continue
+            elif any(layer_name in name for layer_name in skip_list):
+                excluded_params.append(param)
+            else:
+                params.append(param)
+
+        return [
+            {"params": params, "weight_decay": weight_decay},
+            {
+                "params": excluded_params,
+                "weight_decay": 0.0,
+            },
+        ]
+
+    def _config_optimizers_finetune(self, optimizer):
         # Hacky way to fine tune with new learning rate: replace the optimizer and scheduler
         print("[INFO] config for finetuning")
-        optimizer = AdamW(self.model.parameters(), lr=self.params.MAX_LR,
-                          betas=(0.9, 0.998), eps=1e-8, weight_decay=self.params.WEIGHT_DECAY)
-        scheduler = get_constant_schedule(optimizer=optimizer)
+        scheduler = get_constant_schedule(optimizer)
         return {
             "optimizer": optimizer,
             "lr_scheduler": scheduler
         }
 
-    def _config_optimizers_start(self):
+    def _config_optimizers_start(self, optimizer):
         print("[INFO] config for fresh start")
-        optimizer = AdamW(self.model.parameters(), lr=self.params.MAX_LR,
-                          betas=(0.9, 0.998), eps=1e-8, weight_decay=self.params.WEIGHT_DECAY)
-        scheduler = get_cosine_schedule_with_warmup(optimizer=optimizer,
-                                                    num_training_steps=self.params.NUM_ITER,
-                                                    num_warmup_steps=self.params.NUM_WARMUP_STEP)
+        scheduler = get_polynomial_decay_schedule_with_warmup(optimizer=optimizer,
+                                                              num_training_steps=self.params.TOTAL_ITER,
+                                                              num_warmup_steps=self.params.NUM_WARMUP_STEP,
+                                                              lr_end=self.params.MIN_LR,
+                                                              power=self.params.POLY_LR_DECAY_POWER)
         return {
             "optimizer": optimizer,
             "lr_scheduler": scheduler
         }
 
     def configure_optimizers(self):
-        if self.params.IS_FINETUNE:
-            return self._config_optimizers_finetune()
+        # Disable weight decay in norm and bias layer as in
+        # https://github.com/google-research/bert/blob/master/optimization.py#L65
+        if self.params.EXCLUDE_DECAY:
+            parameters = self.exclude_from_wt_decay(self.named_parameters(),
+                                                    weight_decay=self.params.WEIGHT_DECAY)
         else:
-            return self._config_optimizers_start()
+            parameters = self.parameters()
+        optimizer = AdamW(parameters, lr=self.params.MAX_LR,
+                          betas=(0.9, 0.999), eps=1e-6, weight_decay=self.params.WEIGHT_DECAY)
+
+        if self.params.IS_FINETUNE:
+            return self._config_optimizers_finetune(optimizer)
+        else:
+            return self._config_optimizers_start(optimizer)
 
     def forward(self, inputs) -> SpellCheckerOutput:
         return self.model(**inputs)
@@ -70,12 +99,13 @@ class SpellChecker(pl.LightningModule):
         detection_loss = outputs["detection_loss"]
         correction_loss = outputs["correction_loss"]
 
-        self.log("train_loss", loss, on_step=False, on_epoch=True,
-                 prog_bar=True, logger=True, batch_size=self.params.BATCH_SIZE)
+        # Seem we only need to sync in validation and test
+        # https://pytorch-lightning.readthedocs.io/en/1.4.0/advanced/multi_gpu.html#synchronize-validation-and-test-logging
+        self.log("train_loss", loss, on_step=False, on_epoch=True, logger=True, sync_dist=self.params.DISTRIBUTED)
         self.log("det_loss", detection_loss, on_step=True, on_epoch=False,
-                 prog_bar=True, logger=True, batch_size=self.params.BATCH_SIZE)
+                 prog_bar=True, logger=True)
         self.log("corr_loss", correction_loss, on_step=True, on_epoch=False,
-                 prog_bar=True, logger=True, batch_size=self.params.BATCH_SIZE)
+                 prog_bar=True, logger=True)
 
         if (batch_idx + 1) % self.params.DEBUG_PRED_EVERY_N_STEPS == 0:
             debug_prediction(
@@ -93,9 +123,9 @@ class SpellChecker(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         outputs = self(batch)
 
-        self.log("val_det_loss", outputs["detection_loss"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
-        self.log("val_corr_loss", outputs["correction_loss"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
-        self.log("val_loss", outputs["loss"], on_epoch=True, batch_size=self.params.BATCH_SIZE)
+        self.log("val_det_loss", outputs["detection_loss"], on_epoch=True, sync_dist=self.params.DISTRIBUTED)
+        self.log("val_corr_loss", outputs["correction_loss"], on_epoch=True, sync_dist=self.params.DISTRIBUTED)
+        self.log("val_loss", outputs["loss"], on_epoch=True, sync_dist=self.params.DISTRIBUTED)
 
         self.compute_metrics(outputs=outputs,
                              detection_labels=batch["detection_labels"],
@@ -125,17 +155,23 @@ class SpellChecker(pl.LightningModule):
         if detection_labels is not None:
             detection_metrics, batch_sz = compute_detection_metrics(detection_logits=outputs["detection_logits"],
                                                                     detection_labels=detection_labels)
-            self.log("det_f1", detection_metrics["f1"], on_epoch=True, batch_size=bz)
-            self.log("det_precision", detection_metrics["precision"], on_epoch=True, batch_size=bz)
-            self.log("det_recall", detection_metrics["recall"], on_epoch=True, batch_size=bz)
+            self.log("det_f1", detection_metrics["f1"],
+                     on_epoch=True, sync_dist=self.params.DISTRIBUTED)
+            self.log("det_precision", detection_metrics["precision"],
+                     on_epoch=True, sync_dist=self.params.DISTRIBUTED)
+            self.log("det_recall", detection_metrics["recall"],
+                     on_epoch=True, sync_dist=self.params.DISTRIBUTED)
 
         if correction_labels is not None and detection_labels is not None:
             correction_metrics, _ = compute_correction_metrics(correction_logits=outputs["correction_logits"],
                                                                detection_labels=detection_labels,
                                                                correction_labels=correction_labels)
-            self.log("corr_f1", correction_metrics["f1"], on_epoch=True, batch_size=bz)
-            self.log("corr_precision", correction_metrics["precision"], on_epoch=True, batch_size=bz)
-            self.log("corr_recall", correction_metrics["recall"], on_epoch=True, batch_size=bz)
+            self.log("corr_f1", correction_metrics["f1"],
+                     on_epoch=True, sync_dist=self.params.DISTRIBUTED)
+            self.log("corr_precision", correction_metrics["precision"],
+                     on_epoch=True, sync_dist=self.params.DISTRIBUTED)
+            self.log("corr_recall", correction_metrics["recall"],
+                     on_epoch=True, sync_dist=self.params.DISTRIBUTED)
 
 
 def main():
@@ -172,14 +208,28 @@ def main():
 
     checker = SpellChecker(char_cfg, word_cfg, params)
 
-    trainer = pl.Trainer(
-        default_root_dir=params.RUN_DIR,
-        max_steps=params.NUM_ITER,  # Training steps only
-        accelerator="gpu",
-        devices=1,
-        log_every_n_steps=params.LOG_EVERY_N_STEPS,
-        callbacks=[ckpt_callback, lr_monitor]
-    )
+    if params.DISTRIBUTED:
+        trainer = pl.Trainer(
+            default_root_dir=params.RUN_DIR,
+            max_steps=params.TOTAL_ITER,  # Training steps only
+            accelerator="gpu",
+            devices=1,
+            num_nodes=2,
+            # https://pytorch-lightning.readthedocs.io/en/stable/advanced/model_parallel.html#ddp-optimizations
+            # PyTorch>=1.11.0
+            strategy=DDPStrategy(static_graph=True, find_unused_parameters=False),
+            log_every_n_steps=params.LOG_EVERY_N_STEPS,
+            callbacks=[ckpt_callback, lr_monitor]
+        )
+    else:
+        trainer = pl.Trainer(
+            default_root_dir=params.RUN_DIR,
+            max_steps=params.TOTAL_ITER,  # Training steps only
+            accelerator="gpu",
+            devices=1,
+            log_every_n_steps=params.LOG_EVERY_N_STEPS,
+            callbacks=[ckpt_callback, lr_monitor]
+        )
     trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader,
                 ckpt_path="runs/lightning_logs/version_1/checkpoints/last.ckpt")
 
