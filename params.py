@@ -15,7 +15,7 @@ class Param:
     # Training
     TOTAL_ITER: int = int(219661 * 30)  # Single machine
     # TOTAL_ITER: int = int(110342 * 40)  # 2 nodes
-    NUM_WARMUP_STEP: int = 50176
+    NUM_WARMUP_STEP: int = 110080
     BATCH_SIZE: int = 8
     # Batch accumulation might not work on BatchNorm layer,
     # but Albert uses LayerNorm, which does not depend on batch (???)
