@@ -239,7 +239,7 @@ def main():
             accumulate_grad_batches=params.BATCH_ACCUM
         )
     trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader,
-                ckpt_path="runs/lightning_logs/version_1/checkpoints/last.ckpt")
+                ckpt_path=params.CKPT_PATH)
 
 
 if __name__ == '__main__':

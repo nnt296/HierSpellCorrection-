@@ -10,7 +10,7 @@ from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
 from tokenizers.pre_tokenizers import WhitespaceSplit
 from tokenizers.processors import TemplateProcessing
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import wordpunct_tokenize
 
 from utils.common import SpecialTokens, all_special_tokens
 
@@ -32,7 +32,7 @@ class PreWordTokenizer(AbsPreTokenizer):
         sequence = self.normalizer.normalize_str(sequence)
 
         # The word_tokenize func changes " into `` and '' by default
-        tokens = word_tokenize(sequence)
+        tokens = wordpunct_tokenize(sequence)
         for i in range(len(tokens)):
             if tokens[i] == "``" or tokens[i] == "''" or \
                     tokens[i] == '”' or tokens[i] == '“':
@@ -109,11 +109,11 @@ def create_tokenizer(corpus_path: str,
 if __name__ == '__main__':
     create_tokenizer("./data/train",
                      PreCharTokenizer(),
-                     400, 10,
+                     300, 10,
                      "spell_model/char_tokenizer.json")
     create_tokenizer("./data/train",
                      PreWordTokenizer(),
-                     60000, 8,
+                     30000, 5,
                      "spell_model/word_tokenizer.json")
 
     # # Load from transformers library as follows

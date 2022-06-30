@@ -21,6 +21,7 @@ class Param:
     # but Albert uses LayerNorm, which does not depend on batch (???)
     BATCH_ACCUM: int = 32  # = None to disable
     NUM_WORKER: int = 8
+    CKPT_PATH: str = None
 
     # Optimizer
     MAX_LR: float = 8.8e-4
