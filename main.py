@@ -12,6 +12,7 @@ from transformers import (
 import pytorch_lightning as pl
 from pytorch_lightning.strategies import DDPStrategy
 
+from models.optimizer import Lamb
 from models.baseline import AlbertConfig, AlbertSpellChecker, SpellCheckerOutput
 from models.metrics import compute_detection_metrics, compute_correction_metrics
 from data.dataset import MisspelledDataset, custom_collator, word_tokenizer, char_tokenizer
@@ -82,8 +83,14 @@ class SpellChecker(pl.LightningModule):
                                                     weight_decay=self.params.WEIGHT_DECAY)
         else:
             parameters = self.parameters()
-        optimizer = AdamW(parameters, lr=self.params.MAX_LR,
-                          betas=(0.9, 0.999), eps=1e-6, weight_decay=self.params.WEIGHT_DECAY)
+
+        if self.params.OPTIM == "lamb":
+            optimizer = Lamb(parameters, weight_decay=self.params.WEIGHT_DECAY)
+        elif self.params.OPTIM == "adamw":
+            optimizer = AdamW(parameters, lr=self.params.MAX_LR,
+                              betas=(0.9, 0.999), eps=1e-6, weight_decay=self.params.WEIGHT_DECAY)
+        else:
+            raise ValueError("Not supported optimizer: ", self.params.OPTIM)
 
         if self.params.IS_FINETUNE:
             return self._config_optimizers_finetune(optimizer)
@@ -228,7 +235,8 @@ def main():
             accelerator="gpu",
             devices=1,
             log_every_n_steps=params.LOG_EVERY_N_STEPS,
-            callbacks=[ckpt_callback, lr_monitor]
+            callbacks=[ckpt_callback, lr_monitor],
+            accumulate_grad_batches=params.BATCH_ACCUM
         )
     trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader,
                 ckpt_path="runs/lightning_logs/version_1/checkpoints/last.ckpt")
