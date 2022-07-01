@@ -54,27 +54,6 @@ class SpellChecker(pl.LightningModule):
             },
         ]
 
-    def _config_optimizers_finetune(self, optimizer):
-        # Hacky way to fine tune with new learning rate: replace the optimizer and scheduler
-        print("[INFO] config for finetuning")
-        scheduler = get_constant_schedule(optimizer)
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": scheduler
-        }
-
-    def _config_optimizers_start(self, optimizer):
-        print("[INFO] config for fresh start")
-        scheduler = get_polynomial_decay_schedule_with_warmup(optimizer=optimizer,
-                                                              num_training_steps=self.params.TOTAL_STEP,
-                                                              num_warmup_steps=self.params.NUM_WARMUP_STEP,
-                                                              lr_end=self.params.MIN_LR,
-                                                              power=self.params.POLY_LR_DECAY_POWER)
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": scheduler
-        }
-
     def configure_optimizers(self):
         # Disable weight decay in norm and bias layer as in
         # https://github.com/google-research/bert/blob/master/optimization.py#L65
@@ -85,17 +64,26 @@ class SpellChecker(pl.LightningModule):
             parameters = self.parameters()
 
         if self.params.OPTIM == "lamb":
-            optimizer = Lamb(parameters, weight_decay=self.params.WEIGHT_DECAY)
+            optimizer = Lamb(parameters, lr=self.params.MAX_LR, weight_decay=self.params.WEIGHT_DECAY)
         elif self.params.OPTIM == "adamw":
             optimizer = AdamW(parameters, lr=self.params.MAX_LR,
                               betas=(0.9, 0.999), eps=1e-6, weight_decay=self.params.WEIGHT_DECAY)
         else:
             raise ValueError("Not supported optimizer: ", self.params.OPTIM)
 
-        if self.params.IS_FINETUNE:
-            return self._config_optimizers_finetune(optimizer)
-        else:
-            return self._config_optimizers_start(optimizer)
+        scheduler = get_polynomial_decay_schedule_with_warmup(optimizer=optimizer,
+                                                              num_training_steps=self.params.TOTAL_STEP,
+                                                              num_warmup_steps=self.params.NUM_WARMUP_STEP,
+                                                              lr_end=self.params.MIN_LR,
+                                                              power=self.params.POLY_LR_DECAY_POWER)
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 1,
+            }
+        }
 
     def forward(self, inputs) -> SpellCheckerOutput:
         return self.model(**inputs)

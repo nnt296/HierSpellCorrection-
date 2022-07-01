@@ -31,7 +31,7 @@ class Param:
     MIN_LR: float = 1e-6
     POLY_LR_DECAY_POWER: float = 1.0
     WEIGHT_DECAY: float = 1e-2
-    EXCLUDE_DECAY: bool = False
+    EXCLUDE_DECAY: bool = True
     OPTIM: str = "lamb"
     NUM_WARMUP_STEP: int = 110080 // BATCH_ACCUM
 
