@@ -66,7 +66,7 @@ class SpellChecker(pl.LightningModule):
     def _config_optimizers_start(self, optimizer):
         print("[INFO] config for fresh start")
         scheduler = get_polynomial_decay_schedule_with_warmup(optimizer=optimizer,
-                                                              num_training_steps=self.params.TOTAL_ITER,
+                                                              num_training_steps=self.params.TOTAL_STEP,
                                                               num_warmup_steps=self.params.NUM_WARMUP_STEP,
                                                               lr_end=self.params.MIN_LR,
                                                               power=self.params.POLY_LR_DECAY_POWER)
@@ -114,7 +114,7 @@ class SpellChecker(pl.LightningModule):
         self.log("corr_loss", correction_loss, on_step=True, on_epoch=False,
                  prog_bar=True, logger=True)
 
-        if (batch_idx + 1) % self.params.DEBUG_PRED_EVERY_N_STEPS == 0:
+        if (batch_idx + 1) % self.params.DEBUG_PRED_EVERY_N_ITER == 0:
             debug_prediction(
                 detection_logits=outputs["detection_logits"],
                 correction_logits=outputs["correction_logits"],
@@ -218,7 +218,7 @@ def main():
     if params.DISTRIBUTED:
         trainer = pl.Trainer(
             default_root_dir=params.RUN_DIR,
-            max_steps=params.TOTAL_ITER,  # Training steps only
+            max_steps=params.TOTAL_STEP,  # Training steps only
             accelerator="gpu",
             devices=1,
             num_nodes=2,
@@ -231,7 +231,7 @@ def main():
     else:
         trainer = pl.Trainer(
             default_root_dir=params.RUN_DIR,
-            max_steps=params.TOTAL_ITER,  # Training steps only
+            max_steps=params.TOTAL_STEP,  # Training steps only
             accelerator="gpu",
             devices=1,
             log_every_n_steps=params.LOG_EVERY_N_STEPS,

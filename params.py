@@ -11,16 +11,19 @@ class Param:
     VAL_CORPUS_DIR: str = "./data/val"
     PERCENT_NOISE: float = 0.2
     MIN_NUM_TOKENS: int = 5
+    BATCH_SIZE: int = 8
+    NUM_WORKER: int = 8
 
     # Training
-    TOTAL_ITER: int = int(219661 * 30)  # Single machine
-    # TOTAL_ITER: int = int(110342 * 40)  # 2 nodes
-    NUM_WARMUP_STEP: int = 110080
-    BATCH_SIZE: int = 8
+
     # Batch accumulation might not work on BatchNorm layer,
     # but Albert uses LayerNorm, which does not depend on batch (???)
-    BATCH_ACCUM: int = 32  # = None to disable
-    NUM_WORKER: int = 8
+    # Batch accumulation affects global_step when training (so remember to divide steps by BATCH_ACCUM)
+    BATCH_ACCUM: int = 32  # Set to 1 to disable
+    TOTAL_STEP: int = 219661 // BATCH_ACCUM * 30  # Single machine
+    # TOTAL_ITER: int = int(110342 * 40)  # 2 nodes
+    # Change scheduler & optimizer
+    IS_FINETUNE: bool = False
     CKPT_PATH: str = None
 
     # Optimizer
@@ -30,12 +33,10 @@ class Param:
     WEIGHT_DECAY: float = 1e-2
     EXCLUDE_DECAY: bool = False
     OPTIM: str = "lamb"
-
-    # Change scheduler & optimizer
-    IS_FINETUNE: bool = False
+    NUM_WARMUP_STEP: int = 110080 // BATCH_ACCUM
 
     # Logging & saving
-    LOG_EVERY_N_STEPS: int = 1024
-    DEBUG_PRED_EVERY_N_STEPS: int = 5120
+    LOG_EVERY_N_STEPS: int = 1024 // BATCH_ACCUM
+    DEBUG_PRED_EVERY_N_ITER: int = 5120  # Gradient accumulation does not affect this
     RUN_DIR: str = 'runs/'
-    SAVE_N_STEP: int = 115200
+    SAVE_N_STEP: int = 115200 // BATCH_ACCUM
