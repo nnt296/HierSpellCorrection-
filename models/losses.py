@@ -1,5 +1,7 @@
 import torch
 from torch import nn
+from torch.nn import functional as F
+from fvcore.nn.focal_loss import sigmoid_focal_loss
 
 
 def compute_detection_loss(
@@ -21,9 +23,25 @@ def compute_detection_loss(
     Returns:
         loss
     """
-    criteria = nn.CrossEntropyLoss()
+    _det_logits = detection_logits.view(-1, 2)
+    _det_labels = detection_labels.view(-1)
 
-    loss = criteria(detection_logits.view(-1, 2), detection_labels.view(-1))
+    valid_indexes = torch.where(_det_labels != -100)[0]
+    if len(valid_indexes) == 0:
+        print("[WARNING] Empty sentence!")
+        return 0
+
+    # Remove ignored indexes
+    _det_logits = torch.index_select(_det_logits, 0, valid_indexes)
+    _det_labels = torch.index_select(_det_labels, 0, valid_indexes)
+    _det_labels = F.one_hot(_det_labels, num_classes=2)
+
+    # Temporary fix the hyperparameter here
+    # loss = sigmoid_focal_loss(_det_logits, _det_labels, alpha=-1, gamma=2, reduction="mean")
+
+    criteria = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([2]).to(_det_labels.device))
+    loss = criteria(_det_logits, _det_labels.float())
+
     # Normalize the loss based on length of the sequence
     # (Follow the paper but not sure if this has any effect)
     return loss
