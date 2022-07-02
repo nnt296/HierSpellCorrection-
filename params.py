@@ -20,7 +20,7 @@ class Param:
     # but Albert uses LayerNorm, which does not depend on batch (???)
     # Batch accumulation affects global_step when training (so remember to divide steps by BATCH_ACCUM)
     BATCH_ACCUM: int = 32  # Set to 1 to disable
-    TOTAL_STEP: int = 219661 // BATCH_ACCUM * 30  # Single machine
+    TOTAL_STEP: int = 219661 // BATCH_ACCUM * 15  # Single machine
     # TOTAL_ITER: int = int(110342 * 40)  # 2 nodes
     # Change scheduler & optimizer
     IS_FINETUNE: bool = False
