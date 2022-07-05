@@ -109,11 +109,11 @@ def create_tokenizer(corpus_path: str,
 if __name__ == '__main__':
     create_tokenizer("./data/train",
                      PreCharTokenizer(),
-                     300, 10,
+                     300, 5,
                      "spell_model/char_tokenizer.json")
     create_tokenizer("./data/train",
                      PreWordTokenizer(),
-                     30000, 5,
+                     60000, 5,
                      "spell_model/word_tokenizer.json")
 
     # # Load from transformers library as follows

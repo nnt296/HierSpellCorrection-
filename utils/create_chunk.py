@@ -1,5 +1,7 @@
 import json
 import os
+import re
+
 from tokenizers.normalizers import NFKC
 # import underthesea as uts
 
@@ -27,9 +29,14 @@ if __name__ == '__main__':
             text = NFKC().normalize_str(text)
             text = text.replace("\r", "").replace("\n", " ")
             # Remove weird space char
+            text = text.strip()
+            if re.search(r"^=.+=$", text):
+                continue
+
             text = text.replace('\u200b', '')
             text = remove_emoji(text)
             text = text.replace('\n', ' ')
+
             if not text:
                 continue
 
