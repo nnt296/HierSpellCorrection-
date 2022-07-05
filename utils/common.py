@@ -1,6 +1,6 @@
 import re
 
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import wordpunct_tokenize
 from nltk.tokenize.util import align_tokens
 
 
@@ -16,7 +16,7 @@ all_special_tokens = [SpecialTokens.pad, SpecialTokens.unk, SpecialTokens.cls, S
 
 
 def tokenize_with_span(text):
-    raw_tokens = word_tokenize(text)
+    raw_tokens = wordpunct_tokenize(text)
 
     # Convert converted quotes back to original double quotes
     # Do this only if original text contains double quote(s) or double

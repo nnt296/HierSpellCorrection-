@@ -276,19 +276,18 @@ class AlbertSpellChecker(nn.Module):
         detection_logits = self.detection_head(word_outputs[0])
         correction_logits = self.correction_head(word_outputs[0])
 
-        if correction_labels is None and detection_labels is None:
-            loss = None
-            detection_loss = None
-            correction_loss = None
-        elif correction_labels is not None and detection_labels is not None:
-            detection_loss = compute_detection_loss(detection_logits,
-                                                    detection_labels)
-            correction_loss = compute_correct_loss(correction_logits,
-                                                   detection_labels,
-                                                   correction_labels)
-            loss = detection_loss + correction_loss
-        else:
-            raise ValueError("Expect both correction_labels and detection_labels or none of them.")
+        detection_loss = 0.
+        correction_loss = 0.
+
+        if detection_labels is not None:
+            detection_loss = compute_detection_loss(detection_logits=detection_logits,
+                                                    detection_labels=detection_labels)
+            if correction_labels is not None:
+                correction_loss = compute_correct_loss(correction_logits=correction_logits,
+                                                       correction_labels=correction_labels,
+                                                       detection_labels=detection_labels)
+
+        loss = correction_loss + detection_loss
 
         return SpellCheckerOutput(loss, detection_loss, correction_loss, detection_logits, correction_logits)
 
