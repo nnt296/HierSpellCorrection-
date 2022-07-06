@@ -1,7 +1,6 @@
 from typing import Any
 
 import torch
-from pytorch_lightning.loggers import WandbLogger
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from transformers import (
@@ -20,6 +19,7 @@ from data.dataset import MisspelledDataset, custom_collator, word_tokenizer, cha
 from utils.debug_prediction import debug_prediction
 
 from params import Param
+from utils.log import wandb_logger
 
 
 class SpellChecker(pl.LightningModule):
@@ -202,7 +202,6 @@ def main():
                                                  save_top_k=params.SAVE_TOP_K,
                                                  every_n_train_steps=params.SAVE_N_STEP)
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
-    wandb_logger = WandbLogger(project="spell-checker")
 
     checker = SpellChecker(char_cfg, word_cfg, params)
 
@@ -230,7 +229,7 @@ def main():
             log_every_n_steps=params.LOG_EVERY_N_STEPS,
             callbacks=[ckpt_callback, lr_monitor],
             accumulate_grad_batches=params.BATCH_ACCUM,
-            enable_progress_bar=False,
+            enable_progress_bar=True,
             logger=wandb_logger,
         )
     trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader,
