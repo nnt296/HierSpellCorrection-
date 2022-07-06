@@ -198,6 +198,7 @@ def main():
     word_cfg = AlbertConfig().from_json_file("spell_model/word_model/config.json")
 
     ckpt_callback = pl.callbacks.ModelCheckpoint(save_last=True,
+                                                 save_top_k=params.SAVE_TOP_K,
                                                  every_n_train_steps=params.SAVE_N_STEP)
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 

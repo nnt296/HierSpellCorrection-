@@ -299,7 +299,7 @@ if __name__ == '__main__':
     char_cfg.num_attention_heads = 8  # hidden_size % num_attention_heads == 0
     char_cfg.max_position_embeddings = 16
     char_cfg.intermediate_size = 768
-    char_cfg.vocab_size = 227  # Tobe update == real vocab size
+    char_cfg.vocab_size = 300  # Tobe update == real vocab size
     char_cfg.pad_token_id = 0  # == position of [PAD]
     char_cfg.embedding_size = 128
     print(char_cfg)
@@ -311,7 +311,7 @@ if __name__ == '__main__':
     word_cfg.num_attention_heads = 12  # Tobe update == 12
     word_cfg.max_position_embeddings = 192
     word_cfg.intermediate_size = 3072  # Tobe update == 3072
-    word_cfg.vocab_size = 30000  # Tobe update == real vocab size
+    word_cfg.vocab_size = 60000  # Tobe update == real vocab size
     word_cfg.pad_token_id = 0  # == position of [PAD]
     word_cfg.embedding_size = 128 + 256  # == Word Emb Size + Char Hidden Size
     word_cfg.word_embedding_size = 128

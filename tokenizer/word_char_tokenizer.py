@@ -109,7 +109,7 @@ def create_tokenizer(corpus_path: str,
 if __name__ == '__main__':
     create_tokenizer("./data/train",
                      PreCharTokenizer(),
-                     300, 5,
+                     300, 1,
                      "spell_model/char_tokenizer.json")
     create_tokenizer("./data/train",
                      PreWordTokenizer(),

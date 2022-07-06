@@ -20,5 +20,5 @@
   "position_embedding_type": "absolute",
   "transformers_version": "4.20.1",
   "type_vocab_size": 2,
-  "vocab_size": 227
+  "vocab_size": 300
 }
