@@ -1,6 +1,7 @@
 import logging
 
 import torch
+from pytorch_lightning.loggers import WandbLogger
 from transformers import PreTrainedTokenizerFast
 
 from utils.common import SpecialTokens
@@ -12,6 +13,8 @@ from utils.common import SpecialTokens
 logger = logging.getLogger("pytorch_lightning.debug")
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.FileHandler("debug_prediction.log"))
+
+wandb_logger = WandbLogger(project="spell-checker")
 
 
 def debug_prediction(detection_logits: torch.FloatTensor,
@@ -71,3 +74,8 @@ def debug_prediction(detection_logits: torch.FloatTensor,
     logger.info(f"Corr_Pred: {corr_pred_words}")
     logger.info(f"Det_GT:    {det_gt}")
     logger.info(f"Det_Pred:  {det_preds}")
+
+    columns = ["Raw", "Noise", "Corr_Pred", "Det_GT", "Det_Pred"]
+    data = [[' '.join(raw_words), ' '.join(noise_words), ' '.join(corr_pred_words),
+             ' '.join(list(map(str, det_gt))), ' '.join(list(map(str, det_preds)))]]
+    wandb_logger.log_text(key="prediction", columns=columns, data=data)

@@ -1,6 +1,7 @@
 from typing import Any
 
 import torch
+from pytorch_lightning.loggers import WandbLogger
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from transformers import (
@@ -201,6 +202,7 @@ def main():
                                                  save_top_k=params.SAVE_TOP_K,
                                                  every_n_train_steps=params.SAVE_N_STEP)
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
+    wandb_logger = WandbLogger(project="spell-checker")
 
     checker = SpellChecker(char_cfg, word_cfg, params)
 
@@ -215,7 +217,9 @@ def main():
             # PyTorch>=1.11.0
             strategy=DDPStrategy(static_graph=True, find_unused_parameters=False),
             log_every_n_steps=params.LOG_EVERY_N_STEPS,
-            callbacks=[ckpt_callback, lr_monitor]
+            callbacks=[ckpt_callback, lr_monitor],
+            enable_progress_bar=False,
+            logger=wandb_logger,
         )
     else:
         trainer = pl.Trainer(
@@ -225,7 +229,9 @@ def main():
             devices=1,
             log_every_n_steps=params.LOG_EVERY_N_STEPS,
             callbacks=[ckpt_callback, lr_monitor],
-            accumulate_grad_batches=params.BATCH_ACCUM
+            accumulate_grad_batches=params.BATCH_ACCUM,
+            enable_progress_bar=False,
+            logger=wandb_logger,
         )
     trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader,
                 ckpt_path=params.CKPT_PATH)
