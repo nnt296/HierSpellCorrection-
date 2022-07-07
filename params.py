@@ -20,7 +20,7 @@ class Param:
     # but Albert uses LayerNorm, which does not depend on batch (???)
     # Batch accumulation affects global_step when training (so remember to divide steps by BATCH_ACCUM)
     BATCH_ACCUM: int = 512 // BATCH_SIZE  # Set to 1 to disable
-    TOTAL_STEP: int = 100000 * BATCH_ACCUM  # Single machine
+    TOTAL_STEP: int = 200000  # Single machine
     # TOTAL_ITER: int = int(110342 * 40)  # 2 nodes
     # Change scheduler & optimizer
     IS_FINETUNE: bool = False
@@ -33,10 +33,10 @@ class Param:
     WEIGHT_DECAY: float = 1e-2
     EXCLUDE_DECAY: bool = True
     OPTIM: str = "lamb"
-    NUM_WARMUP_STEP: int = 5000 * BATCH_ACCUM
+    NUM_WARMUP_STEP: int = 10000
 
     # Logging & saving
-    LOG_EVERY_N_STEPS: int = 50 * BATCH_ACCUM
-    DEBUG_PRED_EVERY_N_ITER: int = 5120  # Gradient accumulation does not affect this
+    LOG_EVERY_N_STEPS: int = 100
+    DEBUG_PRED_EVERY_N_ITER: int = 5000  # Gradient accumulation does not affect this
     RUN_DIR: str = 'runs/'
-    SAVE_N_STEP: int = 3600
+    SAVE_N_STEP: int = 3000

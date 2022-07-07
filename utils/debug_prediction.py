@@ -2,6 +2,7 @@ import torch
 from transformers import PreTrainedTokenizerFast
 
 from utils.common import SpecialTokens
+from utils.log import logger
 
 
 def debug_prediction(detection_logits: torch.FloatTensor,
