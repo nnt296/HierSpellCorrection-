@@ -1,0 +1,44 @@
+## Templates ##
+include:
+  - remote: "https://nexus.infra.zalo.services/repository/shared/so/gitlab-ci-templates/general/build-image-with-kaniko.yml"
+  - remote: "https://nexus.infra.zalo.services/repository/shared/so/gitlab-ci-templates/general/k8s-deploy.yml"
+
+stages:
+  - build-image
+  - deploy
+
+## Global variales ##
+variables:
+    IMAGE_TAG_PREFIX: baomoi
+    SERVICE_NAME: hier-spell-correction
+
+default: 
+  tags: 
+    - baomoi-k8s-runner
+
+## Build jobs ##
+kaka-thumb:build:
+    extends: .build-image-with-kaniko-template
+    variables:
+        DOCKERFILE: "Dockerfile"
+    only:
+      refs:
+        - large_vocab
+
+#### Deploy Jobs ####
+#
+kaka-thumb:deploy:prod:
+    extends: .deploy-to-k8s-template
+    variables:
+      K8S_CLUSTER_NAME: zte-gpu
+      K8S_NAMESPACE: baomoi
+      ENVIRONMENT: production
+      SERVICE_PORT: 8080
+      INGRESS: "no"
+    only:
+      refs:
+        - large_vocab
+    # when: manual
+
+
+

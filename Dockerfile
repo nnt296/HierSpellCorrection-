@@ -11,19 +11,18 @@ ENV HTTP_PROXY=http://10.60.28.99:81
 ENV HTTPS_PROXY=http://10.60.28.99:81
 ENV no_proxy="localhost,127.0.0.0/8,10.0.0.0/8,*.infra.zalo.services,infra.zalo.services,*.zalo.services,zalo.services,zalogit2.zing.vn,nexus-repo.zapps.vn"
 
-RUN pip install --quiet "pytorch-lightning==1.6.4" "torchmetrics" "transformers==4.17.0" "fvcore" "clean-text" "unidecode" "gdown"
+RUN pip install --quiet "pytorch-lightning==1.6.4" "torchmetrics" "transformers==4.17.0" "fvcore" "clean-text" "unidecode"
 
 RUN mkdir -p HierSpellCorrection
-COPY . /workspace/HierSpellCorrection
-WORKDIR /workspace/HierSpellCorrection/data
+COPY --chown=zdeploy:zdeploy . /workspace/HierSpellCorrection
 
+#WORKDIR /workspace/HierSpellCorrection/data
 # Val dataset
-RUN gdown --id 1RQ1LrhfvKuXTMJ18V_xX8WM7i0W17qHB
+#RUN gdown --id 1RQ1LrhfvKuXTMJ18V_xX8WM7i0W17qHB
 # Train dataset
-RUN gdown --id 1nKoizh2BkHWooQGS4TdJP3M6TZKeQ9F5
-
-RUN unzip train.zip
-RUN unzip val.zip
+#RUN gdown --id 1nKoizh2BkHWooQGS4TdJP3M6TZKeQ9F5
+#RUN unzip train.zip
+#RUN unzip val.zip
 
 WORKDIR /workspace/HierSpellCorrection
 
