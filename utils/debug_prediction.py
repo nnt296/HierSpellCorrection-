@@ -2,7 +2,6 @@ import torch
 from transformers import PreTrainedTokenizerFast
 
 from utils.common import SpecialTokens
-from utils.log import logger, wandb_logger
 
 
 def debug_prediction(detection_logits: torch.FloatTensor,
@@ -62,8 +61,3 @@ def debug_prediction(detection_logits: torch.FloatTensor,
     logger.info(f"Corr_Pred: {corr_pred_words}")
     logger.info(f"Det_GT:    {det_gt}")
     logger.info(f"Det_Pred:  {det_preds}")
-
-    columns = ["Raw", "Noise", "Corr_Pred", "Det_GT", "Det_Pred"]
-    data = [[' '.join(raw_words), ' '.join(noise_words), ' '.join(corr_pred_words),
-             ' '.join(list(map(str, det_gt))), ' '.join(list(map(str, det_preds)))]]
-    wandb_logger.log_text(key="prediction", columns=columns, data=data)

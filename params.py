@@ -39,5 +39,4 @@ class Param:
     LOG_EVERY_N_STEPS: int = 50 * BATCH_ACCUM
     DEBUG_PRED_EVERY_N_ITER: int = 5120  # Gradient accumulation does not affect this
     RUN_DIR: str = 'runs/'
-    SAVE_N_STEP: int = 3600 * BATCH_ACCUM
-    SAVE_TOP_K: int = 1
+    SAVE_N_STEP: int = 3600

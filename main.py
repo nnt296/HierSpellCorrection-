@@ -19,7 +19,6 @@ from data.dataset import MisspelledDataset, custom_collator, word_tokenizer, cha
 from utils.debug_prediction import debug_prediction
 
 from params import Param
-from utils.log import wandb_logger
 
 
 class SpellChecker(pl.LightningModule):
@@ -199,7 +198,6 @@ def main():
     word_cfg = AlbertConfig().from_json_file("spell_model/word_model/config.json")
 
     ckpt_callback = pl.callbacks.ModelCheckpoint(save_last=True,
-                                                 save_top_k=params.SAVE_TOP_K,
                                                  every_n_train_steps=params.SAVE_N_STEP)
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
@@ -217,8 +215,6 @@ def main():
             strategy=DDPStrategy(static_graph=True, find_unused_parameters=False),
             log_every_n_steps=params.LOG_EVERY_N_STEPS,
             callbacks=[ckpt_callback, lr_monitor],
-            enable_progress_bar=False,
-            logger=wandb_logger,
         )
     else:
         trainer = pl.Trainer(
@@ -229,8 +225,6 @@ def main():
             log_every_n_steps=params.LOG_EVERY_N_STEPS,
             callbacks=[ckpt_callback, lr_monitor],
             accumulate_grad_batches=params.BATCH_ACCUM,
-            enable_progress_bar=True,
-            logger=wandb_logger,
         )
     trainer.fit(checker, train_dataloaders=train_loader, val_dataloaders=val_loader,
                 ckpt_path=params.CKPT_PATH)
