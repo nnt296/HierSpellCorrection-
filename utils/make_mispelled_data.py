@@ -4,12 +4,8 @@ This script is used to make diacritic errors, ngọng
 
 import random
 import numpy as np
-import re
 import string
-import locale
-
 import regex
-from underthesea import sent_tokenize, word_tokenize
 
 # Constants
 s1 = u'ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠạẢảẤấẦầẨẩẪẫẬậẮắẰằẲẳẴẵẶặ' \
@@ -50,71 +46,6 @@ def remove_accents(input_str):
         else:
             s += c
     return s
-
-
-def remove_special_char(input_article):
-    # annotator = VnCoreNLP(address="http://127.0.0.1", port=9000) 
-    pattern = ">>.+>>"  # remove hyperlinks between ">>"
-
-    sentences = sent_tokenize(input_article)  # sentence tokenize
-    for i in range(len(sentences)):
-        sentences[i] = re.sub(pattern, "", sentences[i])
-        sentences[i] = sentences[i].replace(".. ", ". ")
-    sentences = [" ".join(word_tokenize(sent)) for sent in sentences]
-    return sentences
-
-
-def read_raw_text(input_file):
-    with open(input_file, 'r') as fr:
-        text = fr.read()
-    return text
-
-
-def read_keywords_file(keywords_file):
-    with open(keywords_file, 'r') as fr:
-        keywords = fr.readlines()
-    return keywords
-
-
-def find_articles_by_keyword(articles, keywords):
-    articles_by_keywords = []
-    for article in articles:
-        if article.find(keywords):
-            pass
-
-
-# check if a token is number or not (e.g. 15.20 or 15,20)
-def is_number(text):
-    try:
-        float(text)
-        return True
-    except ValueError:
-        pass
-    try:
-        locale.atoi(text)
-        return True
-    except ValueError:
-        pass
-    return False
-
-
-# check if a token is hour or measurement (e.g. 15h20, 3h, 1m55)
-def is_time_or_measurement(text):
-    time_pattern = r'\dh\d{2}'
-    time_pattern2 = r'\dh'
-    measurement_pattern = r'\dm\d'
-    time_search = re.search(time_pattern, text)
-    time_search2 = re.search(time_pattern2, text)
-    measurement_search = re.search(measurement_pattern, text)
-    return time_search or time_search2 or measurement_search
-
-
-# check if a token include 'uy' or 'oa'
-def special_tone_contain(text):
-    for i in range(len(s5)):
-        if text.find(s5[i]) > 0:
-            return i
-    return False
 
 
 def manual_replace(s, char, index, length):
