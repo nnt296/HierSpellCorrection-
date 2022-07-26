@@ -2,13 +2,11 @@ import os
 import json
 import random
 import glob
-import regex
 from collections import OrderedDict
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from cleantext import remove_emoji
 
 from utils.add_noise import Synthesizer
 from tokenizer import (
@@ -17,6 +15,7 @@ from tokenizer import (
     num_max_word, num_max_char
 )
 from utils.common import SpecialTokens, all_special_tokens
+from utils.make_mispelled_data import generate_typos
 
 
 def get_key(item):
@@ -41,7 +40,7 @@ def custom_collator(batch):
             "detection_labels": torch.LongTensor of shape batch x word_seq_length
         }
     """
-    _, batch_origin_tokens, batch_synth_tokens, batch_onehot_labels = zip(*batch)
+    batch_origin_tokens, batch_synth_tokens, batch_onehot_labels = zip(*batch)
 
     # Pad batch_onehot_labels to shape B x Seq Len
     max_length = 0
@@ -132,6 +131,7 @@ class MisspelledDataset(Dataset):
         self.percent_err = percent_err
         self.min_num_tokens = min_num_tokens
         self.pre_word_tokenizer = pre_word_tokenizer
+        self.max_length = num_max_word - 2
 
         stats_file = os.path.join(corpus_dir, "stats.json")
         self.stats = json.load(open(stats_file))
@@ -180,53 +180,75 @@ class MisspelledDataset(Dataset):
             return self.__getitem__(123)
 
         # Randomly chunk <num_max_word> of a lengthy text
-        if len(origin_tokens) > num_max_word:
-            start = random.randint(0, len(origin_tokens) - num_max_word - 1)
-            origin_tokens = origin_tokens[start: start + num_max_word]
+        if len(origin_tokens) > self.max_length:
+            start = random.randint(0, len(origin_tokens) - self.max_length - 1)
+            origin_tokens = origin_tokens[start: start + self.max_length]
 
-        success, origin_tokens, tokens, onehot_label = self.synthesizer.add_noise(
-            origin_tokens=origin_tokens, percent_err=self.percent_err)
+        tokens = []
+        onehot_label = []
+        for token in origin_tokens:
+            new_tk, label = generate_typos(token, self.percent_err)
+            tokens.append(new_tk)
+            onehot_label.append(label)
 
-        if not success:
-            # If failed to add noise like case origin_tokens = ["35", "."]
-            # We get another sample
+        if not sum(onehot_label):
+            # If failed to add noise, we get another sample
             return self.__getitem__(123)
 
-        return success, origin_tokens, tokens, onehot_label
+        return origin_tokens, tokens, onehot_label
 
 
 if __name__ == '__main__':
+    from torch.utils.data import DataLoader
+    from tqdm import tqdm
+    import time
+
     random.seed(31)
     np.random.seed(12)
 
-    # ds = MisspelledDataset(corpus_dir="/home/local/BM/Datasets/SpellNews")
+    ds = MisspelledDataset(corpus_dir="/home/local/BM/Datasets/SpellNews/val", percent_err=0.3)
     # print(ds[123])
-    # loader = DataLoader(ds, batch_size=2, collate_fn=custom_collator, drop_last=True)
+    loader = DataLoader(ds, batch_size=2, collate_fn=custom_collator, drop_last=True)
+
+    avg = 0
+    cnt = 0
+
+    # for sample in loader:
+    for sample in tqdm(loader, total=len(ds)//2):
+        correction_labels = sample["correction_labels"]
+        raw_words = word_tokenizer.convert_ids_to_tokens(correction_labels[0])
+        pad_idx = raw_words.index(SpecialTokens.sep) + 1
+
+        detection_labels = sample["detection_labels"]
+        pos = torch.where(detection_labels[0] == 1)[0]
+
+        ratio = len(pos) / pad_idx
+        avg += ratio
+        cnt += 1
+
+    print(f"{avg/cnt} %")
+
+    # sample_batch = [
+    #     (
+    #         True,
+    #         ['Trong', 'trận', 'đấu', 'thuộc', 'vòng', '19', 'giải', 'V-League', '2017', 'trên', 'sân', 'Long', 'An',
+    #          ',', 'đội', 'chủ', 'nhà', 'một', 'lần', 'nữa', 'lại', 'để', 'chiến', 'thắng', 'tuột', 'khỏi', 'tầm', 'tay',
+    #          'dù', 'đã', 'dẫn', 'trước', 'Sana', 'Khánh', 'Hoa', 'BVN', 'từ', 'rất', 'sớm', '.'],
+    #         ['Trong', 'trận', 'đấu', 'thuộc', 'vong', '19', 'giải', 'V-League', '2017', 'trên', 'sân', 'Long', 'An',
+    #          ',', 'đội', 'chủ', 'nhà', 'một', 'lần', 'nữa', 'lại', 'ddể', 'chiến', 'thắng', 'tuột', 'khỏi', 'tầm',
+    #          'tby', 'ởù', 'đã', 'dẫn', 'truwớc', 'Sana', 'Khyánhy', 'Hoa', 'BVN', 'từ', 'rất', 'sớm', '.'],
+    #         [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 4, 6, 0, 0, 2, 0, 4, 0, 0,
+    #          0, 0, 0, 0]
+    #     ),
+    #     (
+    #         True,
+    #         ['Vì', 'vậy', ',', 'viễn', 'cảnh', 'đối', 'đầu', 'với', '150.000', 'quân', 'Tào', 'vẫn', 'khiến', 'liên',
+    #          'minh', 'Tôn', '-', 'Lưu', '...', 'khá', 'dễ', 'chịu', '.'],
+    #         ['Vì', 'zay', ',', 'viễn', 'cảnh', 'đối', 'đầu', 'với', '150.000', 'quân', 'Tào', 'vặn', 'khriến', 'liên',
+    #          'minh', 'Ton', '-', 'Lưu', '...', 'khá', 'dễ', 'chịu', '.'],
+    #         [0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 4, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0]
+    #     )
+    # ]
     #
-    # for sample in tqdm(loader, total=len(ds)//2):
-    #     pass
-
-    sample_batch = [
-        (
-            True,
-            ['Trong', 'trận', 'đấu', 'thuộc', 'vòng', '19', 'giải', 'V-League', '2017', 'trên', 'sân', 'Long', 'An',
-             ',', 'đội', 'chủ', 'nhà', 'một', 'lần', 'nữa', 'lại', 'để', 'chiến', 'thắng', 'tuột', 'khỏi', 'tầm', 'tay',
-             'dù', 'đã', 'dẫn', 'trước', 'Sana', 'Khánh', 'Hoa', 'BVN', 'từ', 'rất', 'sớm', '.'],
-            ['Trong', 'trận', 'đấu', 'thuộc', 'vong', '19', 'giải', 'V-League', '2017', 'trên', 'sân', 'Long', 'An',
-             ',', 'đội', 'chủ', 'nhà', 'một', 'lần', 'nữa', 'lại', 'ddể', 'chiến', 'thắng', 'tuột', 'khỏi', 'tầm',
-             'tby', 'ởù', 'đã', 'dẫn', 'truwớc', 'Sana', 'Khyánhy', 'Hoa', 'BVN', 'từ', 'rất', 'sớm', '.'],
-            [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 4, 6, 0, 0, 2, 0, 4, 0, 0,
-             0, 0, 0, 0]
-        ),
-        (
-            True,
-            ['Vì', 'vậy', ',', 'viễn', 'cảnh', 'đối', 'đầu', 'với', '150.000', 'quân', 'Tào', 'vẫn', 'khiến', 'liên',
-             'minh', 'Tôn', '-', 'Lưu', '...', 'khá', 'dễ', 'chịu', '.'],
-            ['Vì', 'zay', ',', 'viễn', 'cảnh', 'đối', 'đầu', 'với', '150.000', 'quân', 'Tào', 'vặn', 'khriến', 'liên',
-             'minh', 'Ton', '-', 'Lưu', '...', 'khá', 'dễ', 'chịu', '.'],
-            [0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 4, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0]
-        )
-    ]
-
-    out = custom_collator(sample_batch)
-    pass
+    # out = custom_collator(sample_batch)
+    # pass

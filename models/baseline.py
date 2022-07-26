@@ -296,9 +296,9 @@ if __name__ == '__main__':
     char_cfg = AlbertConfig()
     char_cfg.hidden_size = 256
     char_cfg.num_hidden_layers = 4
-    char_cfg.num_attention_heads = 8  # hidden_size % num_attention_heads == 0
+    char_cfg.num_attention_heads = 4  # hidden_size % num_attention_heads == 0
     char_cfg.max_position_embeddings = 16
-    char_cfg.intermediate_size = 768
+    char_cfg.intermediate_size = 1024
     char_cfg.vocab_size = 300  # Tobe update == real vocab size
     char_cfg.pad_token_id = 0  # == position of [PAD]
     char_cfg.embedding_size = 128
