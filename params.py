@@ -9,10 +9,11 @@ class Param:
     # Data
     TRAIN_CORPUS_DIR: str = "./data/train"
     VAL_CORPUS_DIR: str = "./data/val"
-    PERCENT_NOISE: float = 0.3  # Only result in 15% error
+    PERCENT_NOISE: float = 0.15
     MIN_NUM_TOKENS: int = 5
     BATCH_SIZE: int = 16
     NUM_WORKER: int = 8
+    FP16: bool = True
 
     # Training
 

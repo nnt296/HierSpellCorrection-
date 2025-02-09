@@ -203,11 +203,21 @@ if __name__ == '__main__':
     from tqdm import tqdm
     import time
 
-    random.seed(31)
-    np.random.seed(12)
+    # random.seed(31)
+    # np.random.seed(12)
 
-    ds = MisspelledDataset(corpus_dir="/home/local/BM/Datasets/SpellNews/val", percent_err=0.3)
-    # print(ds[123])
+    ds = MisspelledDataset(corpus_dir="data/val", percent_err=0.15)
+
+    # for _ in range(10):
+    #     index = random.choice(list(range(len(ds))))
+    #     origin_tokens, synth_tokens, det_labels = ds[index]
+    #     for idx, det in enumerate(det_labels):
+    #         if det != 0:
+    #             synth_tokens[idx] = f"<typo>{synth_tokens[idx]}</typo>"
+    #     print(' '.join(synth_tokens))
+    #     print(len(origin_tokens))
+    #     print()
+
     loader = DataLoader(ds, batch_size=2, collate_fn=custom_collator, drop_last=True)
 
     avg = 0

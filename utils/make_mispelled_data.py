@@ -163,6 +163,7 @@ def generate_typos(token,
         token = add_chars(token)
 
     if len(token) == 0 or token == origin:
-        return origin, 0
-    else:
-        return token, 1
+        # Add fallback for failed generation
+        token = add_chars(origin)
+    
+    return token, 1

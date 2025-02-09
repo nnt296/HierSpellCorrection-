@@ -245,7 +245,6 @@ class AlbertSpellChecker(nn.Module):
                 word_input_ids: Optional[torch.LongTensor] = None,  # Shape B x Seq Len
                 word_attention_mask: Optional[torch.LongTensor] = None,  # Shape B x Seq Len
                 word_token_type_ids: Optional[torch.LongTensor] = None,  # Shape B x Seq Len
-
                 char_input_ids: Optional[torch.LongTensor] = None,  # Shape (B x Seq Len) x Num Char
                 char_attention_mask: Optional[torch.LongTensor] = None,  # Shape (B x Seq Len) x Num Char
                 char_token_type_ids: Optional[torch.LongTensor] = None,  # Shape (B x Seq Len) x Num Char

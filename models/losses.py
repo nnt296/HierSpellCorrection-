@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-from fvcore.nn.focal_loss import sigmoid_focal_loss
+# from fvcore.nn.focal_loss import sigmoid_focal_loss
 
 
 def compute_detection_loss(
@@ -20,30 +20,31 @@ def compute_detection_loss(
         detection_labels: binary label of shape B x seq_len
                          0 for correct and 1 for incorrect
                          -100 to ignore
-    Returns:
         loss
     """
+    criteria = nn.CrossEntropyLoss(reduction="none")
+
+    _, max_len, _ = detection_logits.size()
+
     _det_logits = detection_logits.view(-1, 2)
     _det_labels = detection_labels.view(-1)
 
     valid_indexes = torch.where(_det_labels != -100)[0]
-    if len(valid_indexes) == 0:
-        print("[WARNING] Empty sentence!")
-        return 0
-
-    # Remove ignored indexes
-    _det_logits = torch.index_select(_det_logits, 0, valid_indexes)
-    _det_labels = torch.index_select(_det_labels, 0, valid_indexes)
-    _det_labels = F.one_hot(_det_labels, num_classes=2)
+    assert len(valid_indexes) > 0, "[WARNING] Empty sentence!"
 
     # Temporary fix the hyperparameter here
     # loss = sigmoid_focal_loss(_det_logits, _det_labels, alpha=-1, gamma=2, reduction="mean")
 
-    criteria = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([2]).to(_det_labels.device))
-    loss = criteria(_det_logits, _det_labels.float())
-
+    loss: torch.Tensor = criteria(_det_logits, _det_labels)  # B x max_len
+    
     # Normalize the loss based on length of the sequence
     # (Follow the paper but not sure if this has any effect)
+    _det_labels = detection_labels != -100
+    seq_len = _det_labels.sum(dim=1, keepdim=False).type(loss.dtype)
+    loss = loss.view(-1, max_len)
+    loss = loss * _det_labels  # Mask out pad tokens
+    loss = loss.sum(dim=1, keepdim=False)
+    loss = torch.sum(loss / (seq_len + 1e-5))
     return loss
 
 
@@ -67,42 +68,43 @@ def compute_correct_loss(
     Returns:
         loss
     """
-    criteria = nn.CrossEntropyLoss()
-    num_classes = correction_logits.size(2)
-
+    criteria = nn.CrossEntropyLoss(reduction="none")
+    
+    _, max_len, num_classes = correction_logits.size()
+    
     _corr_logits = correction_logits.view(-1, num_classes)
-    _det_labels = detection_labels.view(-1)
     _corr_labels = correction_labels.view(-1)
 
-    valid_indexes = torch.where(_det_labels > 0)[0]
+    loss: torch.Tensor = criteria(_corr_logits, _corr_labels)  # B x max_len
 
-    # Case correct batches, return 0
-    if valid_indexes.size(0) == 0:
-        return 0
+    # Normalize the loss based on length of the sequence
+    _det_labels = detection_labels > 0
+    seq_len = _det_labels.sum(dim=1, keepdim=False).type(loss.dtype)
+    loss = loss.view(-1, max_len)
+    loss = loss * _det_labels  # Mask out pad tokens
+    loss = loss.sum(dim=1, keepdim=False)
+    loss = torch.sum(loss / (seq_len + 1e-5))
 
-    _corr_logits = torch.index_select(_corr_logits, 0, valid_indexes)
-    _corr_labels = torch.index_select(_corr_labels, 0, valid_indexes)
-
-    loss = criteria(_corr_logits, _corr_labels)
     return loss
 
 
 if __name__ == '__main__':
-    torch.manual_seed(22)
+    torch.manual_seed(42)
 
     num_vocab = 100
 
     d_logits = torch.randn(2, 10, 2)  # Shape B x seq_len x 2
-    sp_labels = torch.randint(low=0, high=2, size=(2, 10))  # Shap B x seq_len
+    d_labels = torch.randint(low=0, high=2, size=(2, 10))  # Shap B x seq_len
+    d_labels[1][-2:] = -100
 
     c_logits = torch.randn(2, 10, num_vocab)  # Shape B x seq_len x num_vocabs
-    tk_labels = torch.randint(low=0, high=num_vocab, size=(2, 10))  # Shap B x seq_len
+    c_labels = torch.randint(low=0, high=num_vocab, size=(2, 10))  # Shap B x seq_len
 
-    print(sp_labels)
-    print(tk_labels)
+    print(d_labels)
+    print(c_labels)
 
-    d_loss = compute_detection_loss(d_logits, sp_labels)
+    d_loss = compute_detection_loss(d_logits, d_labels)
     print(d_loss)
 
-    c_loss = compute_correct_loss(c_logits, sp_labels, tk_labels)
+    c_loss = compute_correct_loss(c_logits, d_labels, c_labels)
     print(c_loss)

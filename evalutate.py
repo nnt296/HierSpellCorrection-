@@ -21,7 +21,9 @@ def evaluate(ckpt_path: str):
                                                 # Kwargs
                                                 char_config=char_cfg,
                                                 word_config=word_cfg,
-                                                params=params)
+                                                params=params,
+                                                map_location="cpu",
+                                                strict=False)
     # Test dataset
     # path = "./data/spelling_test.json"
     # test_ds = WikiSpellingDataset(path)
@@ -93,4 +95,4 @@ def evaluate(ckpt_path: str):
 
 
 if __name__ == '__main__':
-    evaluate("runs/last.ckpt")
+    evaluate("runs/version_1/last.ckpt")
