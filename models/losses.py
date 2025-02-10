@@ -44,7 +44,7 @@ def compute_detection_loss(
     loss = loss.view(-1, max_len)
     loss = loss * _det_labels  # Mask out pad tokens
     loss = loss.sum(dim=1, keepdim=False)
-    loss = torch.sum(loss / (seq_len + 1e-5))
+    loss = torch.mean(loss / (seq_len + 1e-5))
     return loss
 
 
@@ -83,7 +83,7 @@ def compute_correct_loss(
     loss = loss.view(-1, max_len)
     loss = loss * _det_labels  # Mask out pad tokens
     loss = loss.sum(dim=1, keepdim=False)
-    loss = torch.sum(loss / (seq_len + 1e-5))
+    loss = torch.mean(loss / (seq_len + 1e-5))
 
     return loss
 
